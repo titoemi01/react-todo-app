@@ -22,6 +22,9 @@ body {
 }
 
 .app-container {
+  /* width: 100% stops the page from being sized by its widest child (auto margins in a flex
+     column would otherwise shrink-wrap it and let wide content push the page sideways). */
+  width: 100%;
   max-width: 850px;
   margin: 60px auto;
   padding: 0 24px;
@@ -111,13 +114,80 @@ body {
   cursor: pointer;
 }
 
-/* Only the task name stretches; the priority badge keeps its natural size. */
-.task-title {
+/* The name (and its due date underneath) stretch; the priority badge keeps its natural size. */
+.task-main {
   flex: 1;
   min-width: 0;
-  overflow-wrap: anywhere;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 4px;
   text-align: left;
+}
+
+.task-title {
+  overflow-wrap: anywhere;
   font-size: 16px;
+}
+
+/* Due date chip */
+.due-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 9px;
+  border-radius: 20px;
+  font-size: 12.5px;
+  line-height: 1.4;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.due-later {
+  background: #e9eeea;
+  color: #4f5f55;
+}
+
+.due-soon,
+.due-today {
+  background: #fff0d6;
+  color: #8f5a0d;
+}
+
+.due-overdue {
+  background: #fae1e1;
+  color: #b83f3f;
+}
+
+.due-done {
+  padding-left: 0;
+  background: transparent;
+  color: #66756b;
+  font-weight: 500;
+}
+
+/* Add form: when the four controls don't fit on one line, wrap instead of overflowing the page. */
+.task-form {
+  flex-wrap: wrap;
+}
+
+.task-form input[type='text'] {
+  flex: 1 1 220px;
+}
+
+.task-form button {
+  flex: none;
+}
+
+/* Date pickers: natural width instead of stretching like the text boxes */
+.task-form input[type='date'],
+.edit-area input[type='date'] {
+  flex: none;
+  font-family: inherit;
+}
+
+.edit-area input[type='date'] {
+  padding: 9px 10px;
 }
 
 .completed {
@@ -262,9 +332,15 @@ body {
 
 .edit-area {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 8px;
   flex: 1;
+}
+
+/* The text box gets its own line; priority, date and the buttons sit below it. */
+.edit-area input[type='text'] {
+  flex: 1 1 100%;
 }
 
 .edit-area input {
@@ -278,8 +354,12 @@ body {
 }
 
 .edit-area select {
+  padding: 9px 10px;
+  border: 1px solid #dce5dd;
+  border-radius: 8px;
   background: white;
   color: #397b5a;
+  font-size: 14px;
 }
 
 .edit-area button {
@@ -289,6 +369,14 @@ body {
   min-width: 40px;
   min-height: 40px;
   cursor: pointer;
+  border: 1px solid #dce5dd;
+  border-radius: 8px;
+  background: white;
+  color: #397b5a;
+}
+
+.edit-area button:hover {
+  background: #edf4ef;
 }
 
 /* Clear Completed Tasks Button */
@@ -436,6 +524,28 @@ body {
     height: 40px;
   }
 
+  /* Squeeze the badge and chip a little so the task name keeps room on a phone */
+  .priority-badge {
+    min-width: 0;
+    padding: 4px 9px;
+  }
+
+  .due-chip {
+    font-size: 12px;
+    padding: 2px 8px;
+    line-height: 1.3;
+    border-radius: 12px;
+    white-space: normal; /* long ones like "Overdue by 12 days" may wrap onto two lines */
+  }
+
+  .due-chip svg {
+    display: none;
+  }
+
+  .due-done {
+    padding-left: 0;
+  }
+
   .task-item {
     gap: 7px;
     padding: 12px 8px;
@@ -460,7 +570,8 @@ body {
 }
 
 @media (max-width: 480px) {
-  .task-form select {
+  .task-form select,
+  .task-form input[type='date'] {
     width: 100%;
     padding: 14px;
   }

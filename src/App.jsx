@@ -13,8 +13,8 @@ function App() {
   const [tasks, setTasks] = useLocalStorage('myTasks', [])
   const [filter, setFilter] = useState('all')
 
-  function addTask(title, priority) {
-    const task = { id: Date.now(), title, completed: false, priority }
+  function addTask(title, priority, dueDate) {
+    const task = { id: Date.now(), title, completed: false, priority, dueDate }
     setTasks((previousTasks) => [...previousTasks, task])
   }
 
