@@ -68,8 +68,6 @@ function App() {
       <Header title="My Tasks" subtitle="Organize your day, one task at a time." />
 
       <main className="todo-content">
-        <h2>My Daily Tasks</h2>
-
         <TaskStats
           total={totalTasks}
           completed={completedTasks}

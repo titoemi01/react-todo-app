@@ -60,7 +60,7 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
         </div>
       ) : (
         <>
-          <span className={task.completed ? 'completed' : ''}>{task.title}</span>
+          <span className={`task-title${task.completed ? ' completed' : ''}`}>{task.title}</span>
 
           <span className={`priority-badge priority-${priority.toLowerCase()}`}>{priority}</span>
 
