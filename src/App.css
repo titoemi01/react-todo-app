@@ -45,6 +45,15 @@ body {
   color: #78847c;
 }
 
+.todo-content .error-message {
+  background: #fae6e6;
+  color: #c65353;
+  border-radius: 10px;
+  padding: 10px 14px;
+  margin-bottom: 16px;
+  font-size: 14px;
+}
+
 /* Add Task Form */
 .task-form {
   display: flex;
@@ -341,8 +350,49 @@ body {
   background: #f2d3d3;
 }
 
+/* Action buttons row: "Mark All Complete" on the left, the two "Clear" buttons on the right.
+   The rules below override the old per-button margins so all three line up. */
+.task-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.task-actions-danger {
+  display: flex;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.task-actions button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 38px;
+  margin: 0;
+  padding: 0 14px;
+  white-space: nowrap;
+}
+
 /* Responsive Design */
 @media (max-width: 480px) {
+  .task-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .task-actions-danger {
+    margin-left: 0;
+  }
+
+  .task-actions-danger button {
+    flex: 1;
+  }
+
   .app-container {
     margin: 25px auto;
     padding: 0 12px;

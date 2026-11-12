@@ -23,3 +23,11 @@ dist-ssr
 *.sln
 *.sw?
 .claude/
+
+# Local development database files (PGlite). Your own data, not code.
+server/data/
+
+# Secrets (database passwords etc.). Never commit these.
+.env
+.env.*
+!.env.example

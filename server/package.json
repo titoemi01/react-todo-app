@@ -1,0 +1,16 @@
+{
+  "name": "todo-server",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "node --watch --env-file-if-exists=.env index.js",
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "@electric-sql/pglite": "^0.5.16",
+    "cors": "^2.8.6",
+    "express": "^5.3.0",
+    "pg": "^8.23.1"
+  }
+}

@@ -6,49 +6,35 @@ import TaskStats from './components/TaskStats'
 import TaskForm from './components/TaskForm'
 import TaskFilters from './components/TaskFilters'
 import TaskItem from './components/TaskItem'
-import useLocalStorage from './hooks/useLocalStorage'
+import useTasks from './hooks/useTasks'
 
-// App now only owns the data (tasks, filter) and the actions that change it.
+// App owns the filter and wires UI events to the actions from useTasks.
+// The tasks themselves now live on the server, so everyone with the link shares them.
 function App() {
-  const [tasks, setTasks] = useLocalStorage('myTasks', [])
+  const {
+    tasks,
+    loading,
+    error,
+    addTask,
+    toggleTask,
+    updateTask,
+    deleteTask,
+    markAllComplete,
+    clearCompleted,
+    clearAll,
+  } = useTasks()
   const [filter, setFilter] = useState('all')
 
-  function addTask(title, priority) {
-    const task = { id: Date.now(), title, completed: false, priority }
-    setTasks((previousTasks) => [...previousTasks, task])
+  function handleDelete(id) {
+    if (window.confirm('Are you sure you want to delete this task?')) deleteTask(id)
   }
 
-  function toggleTask(id) {
-    setTasks((previousTasks) =>
-      previousTasks.map((task) =>
-        task.id === id ? { ...task, completed: !task.completed } : task
-      )
-    )
+  function handleClearCompleted() {
+    if (window.confirm('Are you sure you want to clear all completed tasks?')) clearCompleted()
   }
 
-  function updateTask(id, changes) {
-    setTasks((previousTasks) =>
-      previousTasks.map((task) => (task.id === id ? { ...task, ...changes } : task))
-    )
-  }
-
-  function markAllComplete() {
-    setTasks((previousTasks) => previousTasks.map((task) => ({ ...task, completed: true })))
-  }
-
-  function deleteTask(id) {
-    if (!window.confirm('Are you sure you want to delete this task?')) return
-    setTasks((previousTasks) => previousTasks.filter((task) => task.id !== id))
-  }
-
-  function clearCompletedTasks() {
-    if (!window.confirm('Are you sure you want to clear all completed tasks?')) return
-    setTasks((previousTasks) => previousTasks.filter((task) => !task.completed))
-  }
-
-  function clearAllTasks() {
-    if (!window.confirm('Are you sure you want to delete ALL tasks?')) return
-    setTasks([])
+  function handleClearAll() {
+    if (window.confirm('Are you sure you want to delete ALL tasks?')) clearAll()
   }
 
   const filteredTasks = tasks.filter((task) => {
@@ -70,6 +56,12 @@ function App() {
       <main className="todo-content">
         <h2>My Daily Tasks</h2>
 
+        {error && (
+          <p className="error-message" role="alert">
+            {error}
+          </p>
+        )}
+
         <TaskStats
           total={totalTasks}
           completed={completedTasks}
@@ -85,23 +77,27 @@ function App() {
           counts={{ total: totalTasks, remaining: remainingTasks, completed: completedTasks }}
         />
 
-        {remainingTasks > 0 && (
-          <button type="button" className="complete-all-button" onClick={markAllComplete}>
-            <Check size={17} />
-            Mark All Complete
-          </button>
-        )}
-
-        {completedTasks > 0 && (
-          <button type="button" className="clear-button" onClick={clearCompletedTasks}>
-            Clear Completed Tasks
-          </button>
-        )}
-
         {totalTasks > 0 && (
-          <button type="button" className="clear-all-button" onClick={clearAllTasks}>
-            Clear All Tasks
-          </button>
+          <div className="task-actions">
+            {remainingTasks > 0 && (
+              <button type="button" className="complete-all-button" onClick={markAllComplete}>
+                <Check size={16} />
+                Mark All Complete
+              </button>
+            )}
+
+            <div className="task-actions-danger">
+              {completedTasks > 0 && (
+                <button type="button" className="clear-button" onClick={handleClearCompleted}>
+                  Clear Completed
+                </button>
+              )}
+
+              <button type="button" className="clear-all-button" onClick={handleClearAll}>
+                Clear All
+              </button>
+            </div>
+          </div>
         )}
 
         <div className="task-list">
@@ -110,13 +106,15 @@ function App() {
               key={task.id}
               task={task}
               onToggle={toggleTask}
-              onDelete={deleteTask}
+              onDelete={handleDelete}
               onSave={updateTask}
             />
           ))}
         </div>
 
-        {tasks.length === 0 && (
+        {loading && <p className="empty-message">Loading tasks...</p>}
+
+        {!loading && tasks.length === 0 && (
           <p className="empty-message">No tasks yet. Add your first task!</p>
         )}
 
