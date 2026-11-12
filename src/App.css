@@ -1,8 +1,11 @@
 
-/* This app uses a light theme only. Without this, the browser draws form
-   fields dark when the user's computer is in dark mode. */
+/* Light is the default. <html data-theme="dark"> (set by the toggle, see useTheme.js) switches
+   to the dark palette at the end of this file. color-scheme tells the browser which style to use
+   for built-in controls (date picker, scrollbars, dropdowns), and the explicit page background
+   stops the old Vite defaults in index.css from following the device setting. */
 :root {
   color-scheme: light;
+  background: #f5f7f5;
 }
 
 #root {
@@ -575,6 +578,12 @@ body {
     width: 100%;
     padding: 14px;
   }
+
+  /* The form is a column on phones, so the text box's desktop "flex: 1 1 220px" would make it
+     220px TALL. Let it keep its natural height instead. */
+  .task-form input[type='text'] {
+    flex: none;
+  }
 }
 
 
@@ -605,4 +614,240 @@ body {
 .priority-low {
   background: #e1eee4;
   color: #397b5a;
+}
+
+/* ---------- Theme toggle button ---------- */
+/* The bar has no height, so the button floats at the top right without pushing the title down. */
+.app-topbar {
+  position: relative;
+  display: flex;
+  justify-content: flex-end;
+  height: 0;
+  z-index: 1;
+}
+
+.theme-toggle {
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid #dce5dd;
+  border-radius: 12px;
+  background: white;
+  color: #397b5a;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.theme-toggle:hover {
+  background: #edf4ef;
+}
+
+/* =====================================================================
+   Dark theme. Everything below only applies when <html data-theme="dark">.
+   Colors: page #121815, card #1b231f, rows #232d28, borders #34423a,
+   text #e6efe9, muted text #a9b8ae, accent text #6fcf9f.
+   ===================================================================== */
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  background: #121815;
+}
+
+[data-theme='dark'] body {
+  background-color: #121815;
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .app-header h1 {
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .app-header p {
+  color: #a9b8ae;
+}
+
+[data-theme='dark'] .theme-toggle {
+  border-color: #34423a;
+  background: #1b231f;
+  color: #f2c066;
+}
+
+[data-theme='dark'] .theme-toggle:hover {
+  background: #26332c;
+}
+
+[data-theme='dark'] .todo-content {
+  background: #1b231f;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+}
+
+[data-theme='dark'] .todo-content p {
+  color: #a9b8ae;
+}
+
+/* Inputs and dropdowns */
+[data-theme='dark'] .task-form input,
+[data-theme='dark'] .edit-area input {
+  background: #121815;
+  border-color: #34423a;
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .task-form input::placeholder,
+[data-theme='dark'] .edit-area input::placeholder {
+  color: #8a9a90;
+}
+
+[data-theme='dark'] .task-form input:focus,
+[data-theme='dark'] .task-form select:focus {
+  border-color: #6fcf9f;
+}
+
+[data-theme='dark'] .task-form select,
+[data-theme='dark'] .edit-area select {
+  background: #121815;
+  border-color: #34423a;
+  color: #6fcf9f;
+}
+
+/* Stats and progress */
+[data-theme='dark'] .stat-card {
+  background-color: #232d28;
+}
+
+[data-theme='dark'] .stat-card h3,
+[data-theme='dark'] .progress-info strong {
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .progress-info {
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .progress-track {
+  background: #2c3832;
+}
+
+[data-theme='dark'] .progress-fill {
+  background: #4fae82;
+}
+
+/* Filters */
+[data-theme='dark'] .task-filters button {
+  background: #1b231f;
+  border-color: #34423a;
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .task-filters button:hover {
+  background-color: #26332c;
+}
+
+[data-theme='dark'] .task-filters button.active-filter {
+  background-color: #397b5a;
+  border-color: #397b5a;
+  color: white;
+}
+
+/* Bulk action buttons */
+[data-theme='dark'] .complete-all-button {
+  background: rgba(111, 207, 159, 0.14);
+  color: #7fdcae;
+}
+
+[data-theme='dark'] .complete-all-button:hover {
+  background: rgba(111, 207, 159, 0.22);
+}
+
+[data-theme='dark'] .clear-button {
+  background: rgba(255, 143, 143, 0.14);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .clear-button:hover {
+  background: rgba(255, 143, 143, 0.22);
+}
+
+[data-theme='dark'] .clear-all-button {
+  background: rgba(255, 143, 143, 0.1);
+  border-color: rgba(255, 143, 143, 0.3);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .clear-all-button:hover {
+  background: rgba(255, 143, 143, 0.2);
+}
+
+/* Task rows */
+[data-theme='dark'] .task-item {
+  background-color: #232d28;
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .completed {
+  color: #8a9a90;
+}
+
+[data-theme='dark'] .edit-button {
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .edit-button:hover {
+  background: rgba(111, 207, 159, 0.14);
+}
+
+[data-theme='dark'] .delete-button {
+  color: #ff8f8f;
+}
+
+[data-theme='dark'] .delete-button:hover {
+  background: rgba(255, 143, 143, 0.14);
+}
+
+[data-theme='dark'] .edit-area button {
+  background: #1b231f;
+  border-color: #34423a;
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .edit-area button:hover {
+  background: #26332c;
+}
+
+/* Priority badges */
+[data-theme='dark'] .priority-high {
+  background: rgba(255, 143, 143, 0.16);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .priority-medium {
+  background: rgba(242, 192, 102, 0.16);
+  color: #f2c066;
+}
+
+[data-theme='dark'] .priority-low {
+  background: rgba(111, 207, 159, 0.16);
+  color: #7fdcae;
+}
+
+/* Due date chips */
+[data-theme='dark'] .due-later {
+  background: #2b3730;
+  color: #b9c9bf;
+}
+
+[data-theme='dark'] .due-soon,
+[data-theme='dark'] .due-today {
+  background: rgba(242, 192, 102, 0.16);
+  color: #f2c066;
+}
+
+[data-theme='dark'] .due-overdue {
+  background: rgba(255, 143, 143, 0.16);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .due-done {
+  background: transparent;
+  color: #93a399;
 }

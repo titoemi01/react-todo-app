@@ -6,10 +6,13 @@ import TaskStats from './components/TaskStats'
 import TaskForm from './components/TaskForm'
 import TaskFilters from './components/TaskFilters'
 import TaskItem from './components/TaskItem'
+import ThemeToggle from './components/ThemeToggle'
 import useLocalStorage from './hooks/useLocalStorage'
+import useTheme from './hooks/useTheme'
 
 // App now only owns the data (tasks, filter) and the actions that change it.
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const [tasks, setTasks] = useLocalStorage('myTasks', [])
   const [filter, setFilter] = useState('all')
 
@@ -65,6 +68,10 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="app-topbar">
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
+
       <Header title="My Tasks" subtitle="Organize your day, one task at a time." />
 
       <main className="todo-content">
