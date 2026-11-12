@@ -1,4 +1,10 @@
 
+/* This app uses a light theme only. Without this, the browser draws form
+   fields dark when the user's computer is in dark mode. */
+:root {
+  color-scheme: light;
+}
+
 #root {
   min-height: 100vh;
   width: 100%;
@@ -32,6 +38,7 @@ body {
 .todo-content h2 {
   margin-top: 0;
   font-size: 24px;
+  color: #26352d;
 }
 
 .todo-content p {
@@ -53,6 +60,13 @@ body {
   border-radius: 10px;
   font-size: 15px;
   outline: none;
+  background: white;
+  color: #26352d;
+}
+
+.task-form input::placeholder,
+.edit-area input::placeholder {
+  color: #89948c;
 }
 
 .task-form input:focus {
@@ -254,6 +268,13 @@ body {
   padding: 10px;
   border: 1px solid #dce5dd;
   border-radius: 8px;
+  background: white;
+  color: #26352d;
+}
+
+.edit-area select {
+  background: white;
+  color: #397b5a;
 }
 
 .edit-area button {
