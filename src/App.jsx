@@ -85,23 +85,27 @@ function App() {
           counts={{ total: totalTasks, remaining: remainingTasks, completed: completedTasks }}
         />
 
-        {remainingTasks > 0 && (
-          <button type="button" className="complete-all-button" onClick={markAllComplete}>
-            <Check size={17} />
-            Mark All Complete
-          </button>
-        )}
-
-        {completedTasks > 0 && (
-          <button type="button" className="clear-button" onClick={clearCompletedTasks}>
-            Clear Completed Tasks
-          </button>
-        )}
-
         {totalTasks > 0 && (
-          <button type="button" className="clear-all-button" onClick={clearAllTasks}>
-            Clear All Tasks
-          </button>
+          <div className="task-actions">
+            {remainingTasks > 0 && (
+              <button type="button" className="complete-all-button" onClick={markAllComplete}>
+                <Check size={16} />
+                Mark All Complete
+              </button>
+            )}
+
+            <div className="task-actions-danger">
+              {completedTasks > 0 && (
+                <button type="button" className="clear-button" onClick={clearCompletedTasks}>
+                  Clear Completed
+                </button>
+              )}
+
+              <button type="button" className="clear-all-button" onClick={clearAllTasks}>
+                Clear All
+              </button>
+            </div>
+          </div>
         )}
 
         <div className="task-list">
