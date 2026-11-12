@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { api } from '../api'
 
-const POLL_MS = 5000
+const POLL_MS = 8000
 
 // Replaces useLocalStorage. Same job (hold the tasks), but the source of truth is the server.
 export default function useTasks() {
@@ -23,12 +23,35 @@ export default function useTasks() {
   }, [])
 
   useEffect(() => {
-    // Kick off the first load, then poll. Cleanup stops polling when the component unmounts.
+    // Load once, then poll, but ONLY while this tab is on screen. A hidden tab makes no requests
+    // (saves the free hosting limits and lets the database sleep), and the moment you come back
+    // to the tab it refreshes right away so you never see stale tasks.
+    let timer = null
+    const startPolling = () => {
+      if (timer === null) timer = setInterval(refresh, POLL_MS)
+    }
+    const stopPolling = () => {
+      clearInterval(timer)
+      timer = null
+    }
+    const onVisibilityChange = () => {
+      if (document.hidden) {
+        stopPolling()
+      } else {
+        refresh()
+        startPolling()
+      }
+    }
+
     const first = setTimeout(refresh, 0)
-    const timer = setInterval(refresh, POLL_MS)
+    if (!document.hidden) startPolling()
+    document.addEventListener('visibilitychange', onVisibilityChange)
+
+    // Cleanup runs when the component unmounts.
     return () => {
       clearTimeout(first)
-      clearInterval(timer)
+      stopPolling()
+      document.removeEventListener('visibilitychange', onVisibilityChange)
     }
   }, [refresh])
 

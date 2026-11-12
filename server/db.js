@@ -9,8 +9,18 @@ import pg from 'pg'
 //
 // The template value from .env.example counts as "not set", so copying the template by itself
 // can never break the server.
-const url = process.env.DATABASE_URL
+// DATABASE_URL is the usual name; Vercel's Neon integration may provide POSTGRES_URL instead.
+const url = process.env.DATABASE_URL || process.env.POSTGRES_URL
 const hasRealUrl = Boolean(url) && !url.includes('USER:PASSWORD@HOST')
+
+// On Vercel the disk is read-only and wiped between runs, so the local PGlite database can never
+// work there. Fail loudly instead of with a confusing file-system error.
+if (process.env.VERCEL && !hasRealUrl) {
+  throw new Error(
+    'No database configured: add a Neon database to this Vercel project (Storage tab) so that ' +
+      'DATABASE_URL is set, then redeploy.'
+  )
+}
 
 export let databaseKind
 
@@ -59,7 +69,9 @@ function claimDataDir(dataDir) {
 
 if (hasRealUrl) {
   databaseKind = 'Postgres (DATABASE_URL)'
-  pool = new pg.Pool({ connectionString: url })
+  // Each serverless instance keeps only a few connections: many instances can run at once,
+  // and the database has a limit on total connections.
+  pool = new pg.Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10000 })
 } else {
   databaseKind = 'local PGlite (server/data)'
   const { PGlite } = await import('@electric-sql/pglite')
