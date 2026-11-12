@@ -7,37 +7,51 @@ import TaskForm from './components/TaskForm'
 import TaskFilters from './components/TaskFilters'
 import TaskItem from './components/TaskItem'
 import ThemeToggle from './components/ThemeToggle'
-import useTasks from './hooks/useTasks'
+import useLocalStorage from './hooks/useLocalStorage'
 import useTheme from './hooks/useTheme'
 
-// App owns the filter and wires UI events to the actions from useTasks.
-// The tasks themselves now live on the server, so everyone with the link shares them.
+// App now only owns the data (tasks, filter) and the actions that change it.
 function App() {
   const { theme, toggleTheme } = useTheme()
-  const {
-    tasks,
-    loading,
-    error,
-    addTask,
-    toggleTask,
-    updateTask,
-    deleteTask,
-    markAllComplete,
-    clearCompleted,
-    clearAll,
-  } = useTasks()
+  const [tasks, setTasks] = useLocalStorage('myTasks', [])
   const [filter, setFilter] = useState('all')
 
-  function handleDelete(id) {
-    if (window.confirm('Are you sure you want to delete this task?')) deleteTask(id)
+  function addTask(title, priority, dueDate) {
+    const task = { id: Date.now(), title, completed: false, priority, dueDate }
+    setTasks((previousTasks) => [...previousTasks, task])
   }
 
-  function handleClearCompleted() {
-    if (window.confirm('Are you sure you want to clear all completed tasks?')) clearCompleted()
+  function toggleTask(id) {
+    setTasks((previousTasks) =>
+      previousTasks.map((task) =>
+        task.id === id ? { ...task, completed: !task.completed } : task
+      )
+    )
   }
 
-  function handleClearAll() {
-    if (window.confirm('Are you sure you want to delete ALL tasks?')) clearAll()
+  function updateTask(id, changes) {
+    setTasks((previousTasks) =>
+      previousTasks.map((task) => (task.id === id ? { ...task, ...changes } : task))
+    )
+  }
+
+  function markAllComplete() {
+    setTasks((previousTasks) => previousTasks.map((task) => ({ ...task, completed: true })))
+  }
+
+  function deleteTask(id) {
+    if (!window.confirm('Are you sure you want to delete this task?')) return
+    setTasks((previousTasks) => previousTasks.filter((task) => task.id !== id))
+  }
+
+  function clearCompletedTasks() {
+    if (!window.confirm('Are you sure you want to clear all completed tasks?')) return
+    setTasks((previousTasks) => previousTasks.filter((task) => !task.completed))
+  }
+
+  function clearAllTasks() {
+    if (!window.confirm('Are you sure you want to delete ALL tasks?')) return
+    setTasks([])
   }
 
   const filteredTasks = tasks.filter((task) => {
@@ -61,12 +75,6 @@ function App() {
       <Header title="My Tasks" subtitle="Organize your day, one task at a time." />
 
       <main className="todo-content">
-        {error && (
-          <p className="error-message" role="alert">
-            {error}
-          </p>
-        )}
-
         <TaskStats
           total={totalTasks}
           completed={completedTasks}
@@ -93,12 +101,12 @@ function App() {
 
             <div className="task-actions-danger">
               {completedTasks > 0 && (
-                <button type="button" className="clear-button" onClick={handleClearCompleted}>
+                <button type="button" className="clear-button" onClick={clearCompletedTasks}>
                   Clear Completed
                 </button>
               )}
 
-              <button type="button" className="clear-all-button" onClick={handleClearAll}>
+              <button type="button" className="clear-all-button" onClick={clearAllTasks}>
                 Clear All
               </button>
             </div>
@@ -111,15 +119,13 @@ function App() {
               key={task.id}
               task={task}
               onToggle={toggleTask}
-              onDelete={handleDelete}
+              onDelete={deleteTask}
               onSave={updateTask}
             />
           ))}
         </div>
 
-        {loading && <p className="empty-message">Loading tasks...</p>}
-
-        {!loading && tasks.length === 0 && (
+        {tasks.length === 0 && (
           <p className="empty-message">No tasks yet. Add your first task!</p>
         )}
 

@@ -29,7 +29,7 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
 
   return (
     <div className="task-item">
-      <input type="checkbox" checked={task.completed} onChange={() => onToggle(task)} />
+      <input type="checkbox" checked={task.completed} onChange={() => onToggle(task.id)} />
 
       {isEditing ? (
         <div className="edit-area">
