@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { pool, initDb, listTasks, databaseKind } from './db.js'
+import { pool, initDb, closeDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
 
 const app = express()
 const PORT = process.env.PORT || 3001
@@ -9,8 +9,17 @@ const PRIORITIES = ['High', 'Medium', 'Low']
 app.use(cors())
 app.use(express.json())
 
-// Small helper: check the data a client sends. Never trust the client.
-function validate({ title, priority }, { partial = false } = {}) {
+// A due date is "" / null (no date) or a real calendar day written YYYY-MM-DD.
+function isValidDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false
+  const [year, month, day] = value.split('-').map(Number)
+  const date = new Date(Date.UTC(year, month - 1, day))
+  // Rejects things like 2026-02-31, which JavaScript would silently roll into March.
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
+}
+
+// Check the data a client sends. Never trust the client.
+function validate({ title, priority, dueDate }, { partial = false } = {}) {
   if (title !== undefined || !partial) {
     if (typeof title !== 'string' || title.trim() === '') return 'title is required'
     if (title.length > 200) return 'title is too long (max 200 characters)'
@@ -18,8 +27,16 @@ function validate({ title, priority }, { partial = false } = {}) {
   if (priority !== undefined && !PRIORITIES.includes(priority)) {
     return `priority must be one of: ${PRIORITIES.join(', ')}`
   }
+  if (dueDate !== undefined && dueDate !== null && dueDate !== '') {
+    if (typeof dueDate !== 'string' || !isValidDate(dueDate)) {
+      return 'dueDate must be a real date written as YYYY-MM-DD'
+    }
+  }
   return null
 }
+
+// "" and null both mean "no due date". The database stores that as NULL.
+const dateOrNull = (value) => (value ? value : null)
 
 // Every query below uses $1, $2... placeholders and passes values separately.
 // NEVER build SQL by gluing user text into a string: that is how SQL injection happens.
@@ -35,9 +52,9 @@ app.post('/api/tasks', async (req, res) => {
   if (error) return res.status(400).json({ error })
 
   const { rows } = await pool.query(
-    `INSERT INTO tasks (title, priority) VALUES ($1, $2)
-     RETURNING id, title, completed, priority`,
-    [req.body.title.trim(), req.body.priority ?? 'Medium']
+    `INSERT INTO tasks (title, priority, due_date) VALUES ($1, $2, $3::date)
+     RETURNING ${TASK_COLUMNS}`,
+    [req.body.title.trim(), req.body.priority ?? 'Medium', dateOrNull(req.body.dueDate)]
   )
   res.status(201).json(rows[0])
 })
@@ -48,26 +65,38 @@ app.post('/api/tasks/complete-all', async (req, res) => {
   res.json(await listTasks())
 })
 
-// UPDATE: only change the fields the client sent. COALESCE keeps the old value when $n is null.
+// UPDATE: only change the fields the client sent.
+// COALESCE keeps the old value when the client sent nothing for that field. A due date needs a
+// separate "was it sent?" flag, because sending "" must be able to CLEAR the date.
 app.patch('/api/tasks/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
 
-  const { title, priority, completed } = req.body
-  const error = validate({ title, priority }, { partial: true })
+  const { title, priority, completed, dueDate } = req.body
+  const error = validate({ title, priority, dueDate }, { partial: true })
   if (error) return res.status(400).json({ error })
   if (completed !== undefined && typeof completed !== 'boolean') {
     return res.status(400).json({ error: 'completed must be true or false' })
   }
 
+  const dueDateSent = dueDate !== undefined
+
   const { rows } = await pool.query(
     `UPDATE tasks
         SET title     = COALESCE($1, title),
             priority  = COALESCE($2, priority),
-            completed = COALESCE($3, completed)
-      WHERE id = $4
-      RETURNING id, title, completed, priority`,
-    [title?.trim() ?? null, priority ?? null, completed ?? null, id]
+            completed = COALESCE($3, completed),
+            due_date  = CASE WHEN $4::boolean THEN $5::date ELSE due_date END
+      WHERE id = $6
+      RETURNING ${TASK_COLUMNS}`,
+    [
+      title?.trim() ?? null,
+      priority ?? null,
+      completed ?? null,
+      dueDateSent,
+      dateOrNull(dueDate),
+      id,
+    ]
   )
   if (rows.length === 0) return res.status(404).json({ error: 'task not found' })
   res.json(rows[0])
@@ -102,6 +131,17 @@ app.use((err, req, res, next) => {
 })
 
 await initDb()
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}, database: ${databaseKind}`)
 })
+
+// When asked to stop (Ctrl+C, or a host shutting the app down): stop taking requests,
+// close the database cleanly, then exit.
+for (const signal of ['SIGINT', 'SIGTERM', 'SIGBREAK']) {
+  process.on(signal, async () => {
+    console.log(`${signal} received, shutting down...`)
+    server.close()
+    await closeDb()
+    process.exit(0)
+  })
+}

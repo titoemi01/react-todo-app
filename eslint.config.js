@@ -21,7 +21,7 @@ export default defineConfig([
   },
   // The server runs in Node, not the browser, so it gets Node globals (like `process`).
   {
-    files: ['server/**/*.js'],
+    files: ['server/**/*.js', 'vite.config.js'],
     extends: [js.configs.recommended],
     languageOptions: {
       globals: globals.node,

@@ -1,26 +1,31 @@
 import { useState } from 'react'
-import { Pencil, Trash2, Check, X } from 'lucide-react'
+import { Pencil, Trash2, Check, X, CalendarDays } from 'lucide-react'
 import { PRIORITIES, DEFAULT_PRIORITY } from '../constants'
+import { describeDue } from '../dates'
 
 // Editing state lives HERE, not in App, because only this row cares about it.
 function TaskItem({ task, onToggle, onDelete, onSave }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editText, setEditText] = useState(task.title)
   const [editPriority, setEditPriority] = useState(task.priority || DEFAULT_PRIORITY)
+  const [editDueDate, setEditDueDate] = useState(task.dueDate || '')
 
   function startEdit() {
     setEditText(task.title)
     setEditPriority(task.priority || DEFAULT_PRIORITY)
+    setEditDueDate(task.dueDate || '')
     setIsEditing(true)
   }
 
   function save() {
     if (editText.trim() === '') return
-    onSave(task.id, { title: editText.trim(), priority: editPriority })
+    onSave(task.id, { title: editText.trim(), priority: editPriority, dueDate: editDueDate })
     setIsEditing(false)
   }
 
   const priority = task.priority || DEFAULT_PRIORITY
+  // Old tasks saved before this feature have no dueDate, so this stays null for them.
+  const due = task.dueDate ? describeDue(task.dueDate, task.completed) : null
 
   return (
     <div className="task-item">
@@ -45,6 +50,14 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
             ))}
           </select>
 
+          <input
+            type="date"
+            aria-label="Due date (optional)"
+            title="Due date (optional)"
+            value={editDueDate}
+            onChange={(event) => setEditDueDate(event.target.value)}
+          />
+
           <button type="button" onClick={save} aria-label="Save changes" title="Save changes">
             <Check size={17} />
           </button>
@@ -60,7 +73,16 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
         </div>
       ) : (
         <>
-          <span className={task.completed ? 'completed' : ''}>{task.title}</span>
+          <div className="task-main">
+            <span className={`task-title${task.completed ? ' completed' : ''}`}>{task.title}</span>
+
+            {due && (
+              <span className={`due-chip due-${due.tone}`}>
+                <CalendarDays size={13} aria-hidden="true" />
+                {due.text}
+              </span>
+            )}
+          </div>
 
           <span className={`priority-badge priority-${priority.toLowerCase()}`}>{priority}</span>
 

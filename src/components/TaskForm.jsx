@@ -5,14 +5,16 @@ import { PRIORITIES, DEFAULT_PRIORITY } from '../constants'
 function TaskForm({ onAdd }) {
   const [title, setTitle] = useState('')
   const [priority, setPriority] = useState(DEFAULT_PRIORITY)
+  const [dueDate, setDueDate] = useState('') // '' means "no due date"
 
   function handleSubmit(event) {
     event.preventDefault()
     if (title.trim() === '') return
 
-    onAdd(title.trim(), priority)
+    onAdd(title.trim(), priority, dueDate)
     setTitle('')
     setPriority(DEFAULT_PRIORITY)
+    setDueDate('')
   }
 
   return (
@@ -31,6 +33,14 @@ function TaskForm({ onAdd }) {
           </option>
         ))}
       </select>
+
+      <input
+        type="date"
+        aria-label="Due date (optional)"
+        title="Due date (optional)"
+        value={dueDate}
+        onChange={(event) => setDueDate(event.target.value)}
+      />
 
       <button type="submit">+ Add Task</button>
     </form>

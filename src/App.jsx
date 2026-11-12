@@ -6,11 +6,14 @@ import TaskStats from './components/TaskStats'
 import TaskForm from './components/TaskForm'
 import TaskFilters from './components/TaskFilters'
 import TaskItem from './components/TaskItem'
+import ThemeToggle from './components/ThemeToggle'
 import useTasks from './hooks/useTasks'
+import useTheme from './hooks/useTheme'
 
 // App owns the filter and wires UI events to the actions from useTasks.
 // The tasks themselves now live on the server, so everyone with the link shares them.
 function App() {
+  const { theme, toggleTheme } = useTheme()
   const {
     tasks,
     loading,
@@ -51,11 +54,13 @@ function App() {
 
   return (
     <div className="app-container">
+      <div className="app-topbar">
+        <ThemeToggle theme={theme} onToggle={toggleTheme} />
+      </div>
+
       <Header title="My Tasks" subtitle="Organize your day, one task at a time." />
 
       <main className="todo-content">
-        <h2>My Daily Tasks</h2>
-
         {error && (
           <p className="error-message" role="alert">
             {error}

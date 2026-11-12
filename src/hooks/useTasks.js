@@ -46,9 +46,9 @@ export default function useTasks() {
     tasks,
     loading,
     error,
-    addTask: (title, priority) =>
+    addTask: (title, priority, dueDate) =>
       run(async () => {
-        const task = await api.addTask(title, priority)
+        const task = await api.addTask(title, priority, dueDate)
         setTasks((prev) => [...prev, task])
       }),
     toggleTask: (task) =>

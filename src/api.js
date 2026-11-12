@@ -21,8 +21,8 @@ async function request(path, options = {}) {
 
 export const api = {
   getTasks: () => request('/tasks'),
-  addTask: (title, priority) =>
-    request('/tasks', { method: 'POST', body: JSON.stringify({ title, priority }) }),
+  addTask: (title, priority, dueDate) =>
+    request('/tasks', { method: 'POST', body: JSON.stringify({ title, priority, dueDate }) }),
   updateTask: (id, changes) =>
     request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),
