@@ -1,7 +1,6 @@
 import express from 'express'
-import cors from 'cors'
 import { pool, initDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
-import debugNet from './debug.js'
+import { authRouter, requireAuth, sameOriginOnly } from './auth.js'
 
 // This file builds the Express app and nothing else: it never calls listen().
 // Two things use it:
@@ -10,16 +9,13 @@ import debugNet from './debug.js'
 export const app = express()
 
 const PRIORITIES = ['High', 'Medium', 'Low']
-const MAX_TASKS = 500 // the list is public, so cap it: nobody can fill the database
+const MAX_TASKS = 500 // per person: nobody can fill the database
 
-app.use(cors())
+// The site and the API share one address (Vercel, and the Vite proxy in development), so no
+// cross-site access (CORS) is allowed or needed.
 app.use(express.json({ limit: '10kb' })) // refuse huge request bodies
 
-// DIAGNOSTICS: preview deployments only (answers 404 on the live site). It is registered BEFORE
-// the "database ready" check below on purpose: it has to work exactly when the database does not.
-app.get('/api/debug-net', debugNet)
-
-// Create the table before the first real request is handled.
+// Create the tables before the first real request is handled.
 //
 // Two rules learned the hard way on Vercel:
 //   1. Do it LAZILY, inside a request, not while the file is first loaded. Network calls made at
@@ -50,6 +46,9 @@ app.use('/api', (req, res, next) => {
   res.set('Cache-Control', 'no-store')
   next()
 })
+
+// Refuse changes that were sent from a page on a different website.
+app.use('/api', sameOriginOnly)
 
 // A due date is "" / null (no date) or a real calendar day written YYYY-MM-DD.
 function isValidDate(value) {
@@ -91,9 +90,17 @@ app.get('/api/health', async (req, res) => {
   res.json({ ok: true, database: databaseKind, ms: Date.now() - started })
 })
 
+// ACCOUNTS: /api/auth/register, /login, /logout, /me
+app.use('/api/auth', authRouter)
+
+// EVERYTHING BELOW IS PRIVATE. requireAuth answers 401 unless the browser has a valid session,
+// and otherwise sets req.user. Every query then filters by req.user.id, so a person can only ever
+// read or change their OWN tasks: someone else's task id behaves exactly like one that does not exist.
+app.use('/api/tasks', requireAuth)
+
 // READ
 app.get('/api/tasks', async (req, res) => {
-  res.json(await listTasks())
+  res.json(await listTasks(req.user.id))
 })
 
 // CREATE
@@ -101,23 +108,23 @@ app.post('/api/tasks', async (req, res) => {
   const error = validate(req.body ?? {})
   if (error) return res.status(400).json({ error })
 
-  const { rows: counted } = await pool.query('SELECT count(*)::int AS n FROM tasks')
+  const { rows: counted } = await pool.query('SELECT count(*)::int AS n FROM tasks WHERE user_id = $1', [req.user.id])
   if (counted[0].n >= MAX_TASKS) {
     return res.status(400).json({ error: `the list is full (max ${MAX_TASKS} tasks)` })
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO tasks (title, priority, due_date) VALUES ($1, $2, $3::date)
+    `INSERT INTO tasks (user_id, title, priority, due_date) VALUES ($1, $2, $3, $4::date)
      RETURNING ${TASK_COLUMNS}`,
-    [req.body.title.trim(), req.body.priority ?? 'Medium', dateOrNull(req.body.dueDate)]
+    [req.user.id, req.body.title.trim(), req.body.priority ?? 'Medium', dateOrNull(req.body.dueDate)]
   )
   res.status(201).json(rows[0])
 })
 
-// BULK: mark everything complete
+// BULK: mark everything of mine complete
 app.post('/api/tasks/complete-all', async (req, res) => {
-  await pool.query('UPDATE tasks SET completed = true')
-  res.json(await listTasks())
+  await pool.query('UPDATE tasks SET completed = true WHERE user_id = $1', [req.user.id])
+  res.json(await listTasks(req.user.id))
 })
 
 // UPDATE: only change the fields the client sent.
@@ -142,7 +149,7 @@ app.patch('/api/tasks/:id', async (req, res) => {
             priority  = COALESCE($2, priority),
             completed = COALESCE($3, completed),
             due_date  = CASE WHEN $4::boolean THEN $5::date ELSE due_date END
-      WHERE id = $6
+      WHERE id = $6 AND user_id = $7
       RETURNING ${TASK_COLUMNS}`,
     [
       title?.trim() ?? null,
@@ -151,30 +158,31 @@ app.patch('/api/tasks/:id', async (req, res) => {
       dueDateSent,
       dateOrNull(dueDate),
       id,
+      req.user.id,
     ]
   )
   if (rows.length === 0) return res.status(404).json({ error: 'task not found' })
   res.json(rows[0])
 })
 
-// DELETE one
+// DELETE one of mine
 app.delete('/api/tasks/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
 
-  const { rowCount } = await pool.query('DELETE FROM tasks WHERE id = $1', [id])
+  const { rowCount } = await pool.query('DELETE FROM tasks WHERE id = $1 AND user_id = $2', [id, req.user.id])
   if (rowCount === 0) return res.status(404).json({ error: 'task not found' })
   res.status(204).end()
 })
 
-// DELETE many: ?completed=true clears finished tasks, no query clears everything
+// DELETE many of mine: ?completed=true clears finished tasks, no query clears all my tasks
 app.delete('/api/tasks', async (req, res) => {
   if (req.query.completed === 'true') {
-    await pool.query('DELETE FROM tasks WHERE completed = true')
+    await pool.query('DELETE FROM tasks WHERE completed = true AND user_id = $1', [req.user.id])
   } else {
-    await pool.query('DELETE FROM tasks')
+    await pool.query('DELETE FROM tasks WHERE user_id = $1', [req.user.id])
   }
-  res.json(await listTasks())
+  res.json(await listTasks(req.user.id))
 })
 
 // Error handler: Express 5 sends errors from async routes here automatically.

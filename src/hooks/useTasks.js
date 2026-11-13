@@ -1,22 +1,30 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { api } from '../api'
 
 const POLL_MS = 8000
 
-// Replaces useLocalStorage. Same job (hold the tasks), but the source of truth is the server.
-export default function useTasks() {
+// Holds the signed-in person's tasks. The source of truth is the server, so the same list shows up
+// on every device they sign in on. onUnauthorized is called if the server says the session is over.
+export default function useTasks(onUnauthorized) {
   const [tasks, setTasks] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // Keep the latest callback in a ref, so changing it never restarts the polling below.
+  const onUnauthorizedRef = useRef(onUnauthorized)
+  useEffect(() => {
+    onUnauthorizedRef.current = onUnauthorized
+  })
+
   // Ask the server for the latest list. Used on load and every few seconds,
-  // which is how you see what your friend added.
+  // which is how a change made on your phone shows up on your laptop.
   const refresh = useCallback(async () => {
     try {
       setTasks(await api.getTasks())
       setError('')
-    } catch {
-      setError('Cannot reach the server. Retrying...')
+    } catch (err) {
+      if (err.status === 401) onUnauthorizedRef.current?.()
+      else setError('Cannot reach the server. Retrying...')
     } finally {
       setLoading(false)
     }
@@ -61,7 +69,8 @@ export default function useTasks() {
       await action()
       setError('')
     } catch (err) {
-      setError(err.message)
+      if (err.status === 401) onUnauthorizedRef.current?.()
+      else setError(err.message)
     }
   }
 

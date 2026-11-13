@@ -161,9 +161,41 @@ if (hasRealUrl && isNeonHost(url)) {
 // name it dueDate, the field the React app already uses.
 export const TASK_COLUMNS = `id, title, completed, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate"`
 
-// Create the table on first start, and add columns that older copies of the table are missing.
-// Both statements are safe to run every time.
+// Create the tables on first start, and add columns that older copies of a table are missing.
+// Every statement is safe to run every time (it only creates what is missing).
 export async function initDb() {
+  // People who have signed up. The email is stored in lower case and must be unique.
+  // We keep a one-way hash of the password, never the password itself.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id            SERIAL PRIMARY KEY,
+      email         TEXT NOT NULL UNIQUE,
+      password_hash TEXT NOT NULL,
+      created_at    TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  // One row per signed-in browser. The cookie holds a random token; we store only its hash,
+  // so a leaked database cannot be used to sign in as someone.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      token_hash TEXT NOT NULL UNIQUE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
+  // Counters that slow down guessing passwords and mass sign-ups (see auth.js).
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      key          TEXT PRIMARY KEY,
+      count        INTEGER NOT NULL,
+      window_start TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id         SERIAL PRIMARY KEY,
@@ -175,8 +207,13 @@ export async function initDb() {
     )
   `)
 
-  // A tiny "migration": due dates were added after the table first existed.
+  // Tiny "migrations": these columns were added after the table first existed.
   await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_date DATE')
+  // Every task now belongs to a user. Deleting a user deletes their tasks too.
+  await pool.query(
+    'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE'
+  )
+  await pool.query('CREATE INDEX IF NOT EXISTS tasks_user_id_idx ON tasks (user_id)')
 }
 
 // Close the database cleanly (used when the server is asked to stop, e.g. Ctrl+C).
@@ -185,7 +222,11 @@ export async function closeDb() {
   else await local.close()
 }
 
-export async function listTasks() {
-  const { rows } = await pool.query(`SELECT ${TASK_COLUMNS} FROM tasks ORDER BY id`)
+// Only ever the given user's own tasks.
+export async function listTasks(userId) {
+  const { rows } = await pool.query(
+    `SELECT ${TASK_COLUMNS} FROM tasks WHERE user_id = $1 ORDER BY id`,
+    [userId]
+  )
   return rows
 }

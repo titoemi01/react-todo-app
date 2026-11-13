@@ -53,7 +53,7 @@ body {
 
 .todo-content .error-message {
   background: #fae6e6;
-  color: #c65353;
+  color: #a63a3a;
   border-radius: 10px;
   padding: 10px 14px;
   margin-bottom: 16px;
@@ -397,7 +397,7 @@ body {
   margin: 15px 0;
   padding: 10px 16px;
   background: #fae6e6;
-  color: #c65353;
+  color: #a63a3a;
   border: none;
   border-radius: 8px;
   cursor: pointer;
@@ -434,7 +434,7 @@ body {
   margin: 10px 0;
   padding: 10px 16px;
   background: #f8e4e4;
-  color: #b84c4c;
+  color: #a63a3a;
   border: 1px solid #f0cccc;
   border-radius: 8px;
   cursor: pointer;
@@ -612,7 +612,7 @@ body {
 
 .priority-high {
   background: #fae1e1;
-  color: #c44747;
+  color: #b23a3a;
 }
 
 .priority-medium {
@@ -865,4 +865,199 @@ body {
 [data-theme='dark'] .todo-content .error-message {
   background: rgba(255, 143, 143, 0.14);
   color: #ff9b9b;
+}
+
+/* ---------- Accounts: sign-in form and user bar ---------- */
+.auth-form {
+  display: flex;
+  flex-direction: column;
+  max-width: 380px;
+  margin: 10px auto 6px;
+  text-align: left;
+}
+
+.auth-form h2 {
+  margin: 0 0 6px;
+  font-size: 22px;
+  text-align: center;
+}
+
+.auth-form .auth-intro {
+  margin: 0 0 14px;
+  font-size: 15px;
+  text-align: center;
+}
+
+.auth-form label {
+  margin: 12px 0 6px;
+  color: #26352d;
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.auth-form input {
+  padding: 14px;
+  border: 1px solid #dce5dd;
+  border-radius: 10px;
+  background: white;
+  color: #26352d;
+  font-size: 16px; /* 16px stops iPhones from zooming the page when a field is focused */
+  outline: none;
+}
+
+.auth-form input:focus {
+  border-color: #397b5a;
+}
+
+.auth-form .auth-hint {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.auth-form .auth-error {
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #fae6e6;
+  color: #a63a3a;
+  font-size: 14px;
+  text-align: center;
+}
+
+.auth-submit {
+  margin-top: 20px;
+  padding: 14px;
+  border: none;
+  border-radius: 10px;
+  background: #397b5a;
+  color: white;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.auth-submit:hover {
+  background: #2e6549;
+}
+
+.auth-submit:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.auth-switch {
+  margin-top: 10px;
+  padding: 10px;
+  border: none;
+  background: none;
+  color: #397b5a;
+  font-size: 15px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.user-bar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid #e5ebe6;
+  font-size: 14px;
+}
+
+.user-email {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: #5f6e64;
+  text-align: left;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-link {
+  min-height: 40px;
+  padding: 8px 4px;
+  border: none;
+  background: none;
+  color: #66756b;
+  font-size: 14px;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.user-logout {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 40px;
+  padding: 8px 12px;
+  border: 1px solid #dce5dd;
+  border-radius: 8px;
+  background: white;
+  color: #397b5a;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.user-logout:hover {
+  background: #edf4ef;
+}
+
+@media (max-width: 480px) {
+  .user-bar {
+    flex-wrap: wrap;
+  }
+
+  .user-email {
+    flex: 1 1 100%;
+  }
+
+  .user-logout {
+    margin-left: auto;
+  }
+}
+
+[data-theme='dark'] .auth-form h2,
+[data-theme='dark'] .auth-form label {
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .auth-form input {
+  background: #121815;
+  border-color: #34423a;
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .auth-form input:focus {
+  border-color: #6fcf9f;
+}
+
+[data-theme='dark'] .auth-form .auth-error {
+  background: rgba(255, 143, 143, 0.14);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .auth-switch {
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .user-bar {
+  border-bottom-color: #34423a;
+}
+
+[data-theme='dark'] .user-email,
+[data-theme='dark'] .user-link {
+  color: #a9b8ae;
+}
+
+[data-theme='dark'] .user-logout {
+  background: #1b231f;
+  border-color: #34423a;
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .user-logout:hover {
+  background: #26332c;
 }
