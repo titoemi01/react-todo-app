@@ -191,15 +191,25 @@ body {
   flex: none;
 }
 
-/* Date pickers: natural width instead of stretching like the text boxes */
+/* Date and time pickers: natural width instead of stretching like the text boxes */
 .task-form input[type='date'],
-.edit-area input[type='date'] {
+.task-form input[type='time'],
+.edit-area input[type='date'],
+.edit-area input[type='time'] {
   flex: none;
   font-family: inherit;
 }
 
-.edit-area input[type='date'] {
+.edit-area input[type='date'],
+.edit-area input[type='time'] {
   padding: 9px 10px;
+}
+
+/* The time picker is greyed out until a date is chosen */
+.task-form input:disabled,
+.edit-area input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .completed {
@@ -583,7 +593,8 @@ body {
 
 @media (max-width: 480px) {
   .task-form select,
-  .task-form input[type='date'] {
+  .task-form input[type='date'],
+  .task-form input[type='time'] {
     width: 100%;
     padding: 14px;
   }
@@ -1060,4 +1071,150 @@ body {
 
 [data-theme='dark'] .user-logout:hover {
   background: #26332c;
+}
+
+/* ---------- Calendar link and "Add to calendar" ---------- */
+.add-to-calendar {
+  color: #397b5a;
+  font-size: 12.5px;
+  text-decoration: underline;
+}
+
+.calendar-panel {
+  margin: 0 0 20px;
+  padding: 16px;
+  border: 1px solid #dce5dd;
+  border-radius: 12px;
+  background: #f5f7f5;
+  text-align: left;
+}
+
+.calendar-panel h3 {
+  margin: 0 0 6px;
+  color: #26352d;
+  font-size: 17px;
+}
+
+.calendar-panel p {
+  margin: 0 0 10px;
+  font-size: 14px;
+}
+
+.calendar-link {
+  width: 100%;
+  padding: 12px;
+  border: 1px solid #dce5dd;
+  border-radius: 10px;
+  background: white;
+  color: #26352d;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 13px;
+}
+
+.calendar-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.calendar-actions > * {
+  display: inline-flex;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.calendar-primary {
+  border: none;
+  background: #397b5a;
+  color: white;
+}
+
+.calendar-secondary {
+  border: 1px solid #dce5dd;
+  background: white;
+  color: #397b5a;
+}
+
+.calendar-reset {
+  border: 1px solid #f0cccc;
+  background: transparent;
+  color: #a63a3a;
+}
+
+.calendar-panel .calendar-message {
+  color: #397b5a;
+  font-weight: 600;
+}
+
+.calendar-panel .calendar-error {
+  color: #a63a3a;
+}
+
+.calendar-panel .calendar-warning {
+  font-size: 13px;
+}
+
+.calendar-help {
+  font-size: 14px;
+}
+
+.calendar-help summary {
+  padding: 8px 0;
+  color: #397b5a;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.calendar-help ul {
+  margin: 6px 0;
+  padding-left: 18px;
+}
+
+.calendar-help li {
+  margin-bottom: 8px;
+}
+
+[data-theme='dark'] .add-to-calendar,
+[data-theme='dark'] .calendar-help summary {
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .calendar-panel {
+  border-color: #34423a;
+  background: #232d28;
+}
+
+[data-theme='dark'] .calendar-panel h3 {
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .calendar-link {
+  border-color: #34423a;
+  background: #121815;
+  color: #e6efe9;
+}
+
+[data-theme='dark'] .calendar-secondary {
+  border-color: #34423a;
+  background: #1b231f;
+  color: #6fcf9f;
+}
+
+[data-theme='dark'] .calendar-reset {
+  border-color: rgba(255, 143, 143, 0.35);
+  color: #ff9b9b;
+}
+
+[data-theme='dark'] .calendar-panel .calendar-message {
+  color: #7fdcae;
+}
+
+[data-theme='dark'] .calendar-panel .calendar-error {
+  color: #ff9b9b;
 }

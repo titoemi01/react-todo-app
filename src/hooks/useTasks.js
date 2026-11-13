@@ -78,9 +78,9 @@ export default function useTasks(onUnauthorized) {
     tasks,
     loading,
     error,
-    addTask: (title, priority, dueDate) =>
+    addTask: (title, priority, dueDate, dueTime) =>
       run(async () => {
-        const task = await api.addTask(title, priority, dueDate)
+        const task = await api.addTask(title, priority, dueDate, dueTime)
         setTasks((prev) => [...prev, task])
       }),
     toggleTask: (task) =>

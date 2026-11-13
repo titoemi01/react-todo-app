@@ -40,9 +40,13 @@ export const api = {
   deleteAccount: (password) =>
     request('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
 
+  // my private calendar subscription link (asking creates it the first time; reset replaces it)
+  calendarLink: () => request('/calendar/link'),
+  resetCalendarLink: () => request('/calendar/reset', { method: 'POST' }),
+
   // tasks (private to the signed-in user)
   getTasks: () => request('/tasks'),
-  addTask: (title, priority, dueDate) => post('/tasks', { title, priority, dueDate }),
+  addTask: (title, priority, dueDate, dueTime) => post('/tasks', { title, priority, dueDate, dueTime }),
   updateTask: (id, changes) =>
     request(`/tasks/${id}`, { method: 'PATCH', body: JSON.stringify(changes) }),
   deleteTask: (id) => request(`/tasks/${id}`, { method: 'DELETE' }),

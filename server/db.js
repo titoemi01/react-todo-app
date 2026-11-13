@@ -158,8 +158,10 @@ if (hasRealUrl && isNeonHost(url)) {
 
 // The columns we send to the browser. A DATE would arrive as a JavaScript Date object (and can
 // shift by a day with time zones), so we ask Postgres for plain "YYYY-MM-DD" text instead and
-// name it dueDate, the field the React app already uses.
-export const TASK_COLUMNS = `id, title, completed, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate"`
+// name it dueDate, the field the React app already uses. The optional time of day is the same
+// idea: plain "HH:MM" text (24-hour) called dueTime. It is a wall-clock time with no time zone,
+// meaning "9:00 wherever you are", which is what a personal reminder usually wants.
+export const TASK_COLUMNS = `id, title, completed, priority, to_char(due_date, 'YYYY-MM-DD') AS "dueDate", to_char(due_time, 'HH24:MI') AS "dueTime"`
 
 // Create the tables on first start, and add columns that older copies of a table are missing.
 // Every statement is safe to run every time (it only creates what is missing).
@@ -214,6 +216,12 @@ export async function initDb() {
     'ALTER TABLE tasks ADD COLUMN IF NOT EXISTS user_id INTEGER REFERENCES users(id) ON DELETE CASCADE'
   )
   await pool.query('CREATE INDEX IF NOT EXISTS tasks_user_id_idx ON tasks (user_id)')
+  // An optional time of day for the due date (only meaningful when due_date is set).
+  await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_time TIME')
+  // Each person's secret calendar link: calendar apps cannot send a login cookie, so the long
+  // random token inside the link is what proves whose tasks to show (see calendar.js).
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS calendar_token TEXT')
+  await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_calendar_token_idx ON users (calendar_token)')
 }
 
 // Close the database cleanly (used when the server is asked to stop, e.g. Ctrl+C).

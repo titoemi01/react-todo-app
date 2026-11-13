@@ -1,6 +1,7 @@
 import express from 'express'
 import { pool, initDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
 import { authRouter, requireAuth, sameOriginOnly } from './auth.js'
+import { calendarRouter, singleTaskCalendar } from './calendar.js'
 
 // This file builds the Express app and nothing else: it never calls listen().
 // Two things use it:
@@ -59,8 +60,11 @@ function isValidDate(value) {
   return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === day
 }
 
+// A due time is "" / null (no time) or a 24-hour clock time written HH:MM, such as 09:30 or 18:05.
+const isValidTime = (value) => /^([01]\d|2[0-3]):[0-5]\d$/.test(value)
+
 // Check the data a client sends. Never trust the client.
-function validate({ title, priority, dueDate }, { partial = false } = {}) {
+function validate({ title, priority, dueDate, dueTime }, { partial = false } = {}) {
   if (title !== undefined || !partial) {
     if (typeof title !== 'string' || title.trim() === '') return 'title is required'
     if (title.length > 200) return 'title is too long (max 200 characters)'
@@ -72,6 +76,14 @@ function validate({ title, priority, dueDate }, { partial = false } = {}) {
     if (typeof dueDate !== 'string' || !isValidDate(dueDate)) {
       return 'dueDate must be a real date written as YYYY-MM-DD'
     }
+  }
+  if (dueTime !== undefined && dueTime !== null && dueTime !== '') {
+    if (typeof dueTime !== 'string' || !isValidTime(dueTime)) {
+      return 'dueTime must be a time written as HH:MM (24-hour), for example 09:30'
+    }
+    // A time on its own means nothing. (If a date was sent, it must be a real one: checked above.)
+    if (!partial && !dueDate) return 'dueTime needs a dueDate'
+    if (partial && dueDate !== undefined && !dueDate) return 'dueTime needs a dueDate'
   }
   return null
 }
@@ -92,6 +104,10 @@ app.get('/api/health', async (req, res) => {
 
 // ACCOUNTS: /api/auth/register, /login, /logout, /me
 app.use('/api/auth', authRouter)
+
+// CALENDAR: /api/calendar/link and /reset need the login; the feed address /api/calendar/<secret>.ics
+// does not (calendar apps cannot log in), the secret inside the address is the proof.
+app.use('/api/calendar', calendarRouter)
 
 // EVERYTHING BELOW IS PRIVATE. requireAuth answers 401 unless the browser has a valid session,
 // and otherwise sets req.user. Every query then filters by req.user.id, so a person can only ever
@@ -114,12 +130,21 @@ app.post('/api/tasks', async (req, res) => {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO tasks (user_id, title, priority, due_date) VALUES ($1, $2, $3, $4::date)
+    `INSERT INTO tasks (user_id, title, priority, due_date, due_time) VALUES ($1, $2, $3, $4::date, $5::time)
      RETURNING ${TASK_COLUMNS}`,
-    [req.user.id, req.body.title.trim(), req.body.priority ?? 'Medium', dateOrNull(req.body.dueDate)]
+    [
+      req.user.id,
+      req.body.title.trim(),
+      req.body.priority ?? 'Medium',
+      dateOrNull(req.body.dueDate),
+      dateOrNull(req.body.dueTime),
+    ]
   )
   res.status(201).json(rows[0])
 })
+
+// "Add to calendar" for one task: a one-event .ics file to open or import.
+app.get('/api/tasks/:id/calendar.ics', singleTaskCalendar)
 
 // BULK: mark everything of mine complete
 app.post('/api/tasks/complete-all', async (req, res) => {
@@ -134,22 +159,29 @@ app.patch('/api/tasks/:id', async (req, res) => {
   const id = Number(req.params.id)
   if (!Number.isInteger(id)) return res.status(400).json({ error: 'invalid id' })
 
-  const { title, priority, completed, dueDate } = req.body ?? {}
-  const error = validate({ title, priority, dueDate }, { partial: true })
+  const { title, priority, completed, dueDate, dueTime } = req.body ?? {}
+  const error = validate({ title, priority, dueDate, dueTime }, { partial: true })
   if (error) return res.status(400).json({ error })
   if (completed !== undefined && typeof completed !== 'boolean') {
     return res.status(400).json({ error: 'completed must be true or false' })
   }
 
   const dueDateSent = dueDate !== undefined
+  const dueTimeSent = dueTime !== undefined
 
+  // The due time follows the due date: if the task ends up with no date, it has no time either.
   const { rows } = await pool.query(
     `UPDATE tasks
         SET title     = COALESCE($1, title),
             priority  = COALESCE($2, priority),
             completed = COALESCE($3, completed),
-            due_date  = CASE WHEN $4::boolean THEN $5::date ELSE due_date END
-      WHERE id = $6 AND user_id = $7
+            due_date  = CASE WHEN $4::boolean THEN $5::date ELSE due_date END,
+            due_time  = CASE
+                          WHEN (CASE WHEN $4::boolean THEN $5::date ELSE due_date END) IS NULL THEN NULL
+                          WHEN $6::boolean THEN $7::time
+                          ELSE due_time
+                        END
+      WHERE id = $8 AND user_id = $9
       RETURNING ${TASK_COLUMNS}`,
     [
       title?.trim() ?? null,
@@ -157,6 +189,8 @@ app.patch('/api/tasks/:id', async (req, res) => {
       completed ?? null,
       dueDateSent,
       dateOrNull(dueDate),
+      dueTimeSent,
+      dateOrNull(dueTime),
       id,
       req.user.id,
     ]

@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { Check, LogOut } from 'lucide-react'
+import { Check, LogOut, CalendarDays } from 'lucide-react'
+import CalendarPanel from './CalendarPanel'
 import TaskStats from './TaskStats'
 import TaskForm from './TaskForm'
 import TaskFilters from './TaskFilters'
@@ -22,6 +23,7 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
     clearAll,
   } = useTasks(onUnauthorized)
   const [filter, setFilter] = useState('all')
+  const [showCalendar, setShowCalendar] = useState(false)
 
   function handleDelete(id) {
     if (window.confirm('Are you sure you want to delete this task?')) deleteTask(id)
@@ -64,6 +66,15 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
         <span className="user-email" title={user.email}>
           {user.email}
         </span>
+        <button
+          type="button"
+          className="user-logout"
+          aria-expanded={showCalendar}
+          onClick={() => setShowCalendar((open) => !open)}
+        >
+          <CalendarDays size={15} />
+          Calendar
+        </button>
         <button type="button" className="user-link" onClick={handleDeleteAccount}>
           Delete account
         </button>
@@ -72,6 +83,8 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
           Log out
         </button>
       </div>
+
+      {showCalendar && <CalendarPanel />}
 
       {error && (
         <p className="error-message" role="alert">

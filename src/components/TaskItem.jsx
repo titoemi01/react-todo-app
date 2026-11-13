@@ -9,23 +9,35 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
   const [editText, setEditText] = useState(task.title)
   const [editPriority, setEditPriority] = useState(task.priority || DEFAULT_PRIORITY)
   const [editDueDate, setEditDueDate] = useState(task.dueDate || '')
+  const [editDueTime, setEditDueTime] = useState(task.dueTime || '')
 
   function startEdit() {
     setEditText(task.title)
     setEditPriority(task.priority || DEFAULT_PRIORITY)
     setEditDueDate(task.dueDate || '')
+    setEditDueTime(task.dueTime || '')
     setIsEditing(true)
   }
 
   function save() {
     if (editText.trim() === '') return
-    onSave(task.id, { title: editText.trim(), priority: editPriority, dueDate: editDueDate })
+    onSave(task.id, {
+      title: editText.trim(),
+      priority: editPriority,
+      dueDate: editDueDate,
+      dueTime: editDueDate ? editDueTime : '', // a time only makes sense with a date
+    })
     setIsEditing(false)
+  }
+
+  function handleEditDateChange(event) {
+    setEditDueDate(event.target.value)
+    if (!event.target.value) setEditDueTime('')
   }
 
   const priority = task.priority || DEFAULT_PRIORITY
   // Old tasks saved before this feature have no dueDate, so this stays null for them.
-  const due = task.dueDate ? describeDue(task.dueDate, task.completed) : null
+  const due = task.dueDate ? describeDue(task.dueDate, task.completed, task.dueTime) : null
 
   return (
     <div className="task-item">
@@ -55,7 +67,16 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
             aria-label="Due date (optional)"
             title="Due date (optional)"
             value={editDueDate}
-            onChange={(event) => setEditDueDate(event.target.value)}
+            onChange={handleEditDateChange}
+          />
+
+          <input
+            type="time"
+            aria-label="Due time (optional, needs a date)"
+            title={editDueDate ? 'Due time (optional)' : 'Pick a due date first to add a time'}
+            value={editDueTime}
+            disabled={!editDueDate}
+            onChange={(event) => setEditDueTime(event.target.value)}
           />
 
           <button type="button" onClick={save} aria-label="Save changes" title="Save changes">
@@ -81,6 +102,13 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
                 <CalendarDays size={13} aria-hidden="true" />
                 {due.text}
               </span>
+            )}
+
+            {/* Opens a one-event calendar file (needs the login cookie, which the browser sends). */}
+            {due && !task.completed && (
+              <a className="add-to-calendar" href={`/api/tasks/${task.id}/calendar.ics`} download>
+                Add to calendar
+              </a>
             )}
           </div>
 
