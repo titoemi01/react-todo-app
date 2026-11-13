@@ -19,12 +19,29 @@ app.use(express.json({ limit: '10kb' })) // refuse huge request bodies
 // the "database ready" check below on purpose: it has to work exactly when the database does not.
 app.get('/api/debug-net', debugNet)
 
-// Create the table before the first request is handled. In production every cold start of the
-// function runs this once; it is safe to repeat because it only creates what is missing.
-export const ready = initDb()
-ready.catch((error) => console.error('Database setup failed:', error))
+// Create the table before the first real request is handled.
+//
+// Two rules learned the hard way on Vercel:
+//   1. Do it LAZILY, inside a request, not while the file is first loaded. Network calls made at
+//      load time (before any request exists) were timing out on Vercel.
+//   2. Never remember a FAILURE. The old version stored the failed attempt forever, so one hiccup
+//      broke every request until Vercel threw the instance away. Now a failed setup is forgotten
+//      and the next request simply tries again. Only a success is kept.
+// It is safe to repeat because it only creates what is missing.
+let setupPromise = null
+export function ready() {
+  if (!setupPromise) {
+    setupPromise = initDb().catch((error) => {
+      setupPromise = null // forget the failure so the next request retries
+      console.error('Database setup failed:', error)
+      throw error
+    })
+  }
+  return setupPromise
+}
+
 app.use(async (req, res, next) => {
-  await ready // if setup failed this throws, and the error handler below answers with a 500
+  await ready() // if setup failed this throws, and the error handler below answers with a 500
   next()
 })
 

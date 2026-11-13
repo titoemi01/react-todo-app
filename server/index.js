@@ -4,7 +4,7 @@ import { closeDb, databaseKind } from './db.js'
 
 const PORT = process.env.PORT || 3001
 
-await ready
+await ready() // locally, fail fast at startup if the database cannot be opened
 const server = app.listen(PORT, () => {
   console.log(`API running on http://localhost:${PORT}, database: ${databaseKind}`)
 })
