@@ -10,8 +10,52 @@ import pg from 'pg'
 // The template value from .env.example counts as "not set", so copying the template by itself
 // can never break the server.
 // DATABASE_URL is the usual name; Vercel's Neon integration may provide POSTGRES_URL instead.
-const url = process.env.DATABASE_URL || process.env.POSTGRES_URL
+const rawUrl = process.env.DATABASE_URL || process.env.POSTGRES_URL
+
+// Copy-paste into a settings form often adds invisible trouble: spaces or a newline around the
+// value, wrapping quotes, or the "channel_binding" option that this driver does not need.
+// Clean those up so a harmless paste mistake cannot break the connection.
+function cleanUrl(value) {
+  if (!value) return value
+  return value
+    .trim()
+    .replace(/^['"]+|['"]+$/g, '')
+    .replace(/([?&])channel_binding=[^&]*&?/, '$1')
+    .replace(/[?&]$/, '')
+}
+
+// A description of the connection string that is safe to put in logs: it never includes the
+// password, only the parts that help find a typo (host, database, option names, length).
+function describeUrl(value) {
+  const text = value ?? ''
+  const info = {
+    length: text.length,
+    hadOuterWhitespaceOrQuotes: text !== text.trim() || /^['"]|['"]$/.test(text.trim()),
+    hadChannelBinding: /channel_binding/.test(text),
+  }
+  try {
+    const u = new URL(text.trim().replace(/^['"]+|['"]+$/g, ''))
+    return {
+      ...info,
+      scheme: u.protocol,
+      user: u.username,
+      hasPassword: u.password.length > 0,
+      host: u.hostname,
+      port: u.port || '(default)',
+      database: u.pathname.replace('/', ''),
+      options: [...u.searchParams.keys()],
+    }
+  } catch {
+    return { ...info, parseable: false, startsWith: text.trim().slice(0, 12) }
+  }
+}
+
+const url = cleanUrl(rawUrl)
 const hasRealUrl = Boolean(url) && !url.includes('USER:PASSWORD@HOST')
+
+if (process.env.VERCEL && hasRealUrl) {
+  console.log('Database connection string as received:', JSON.stringify(describeUrl(rawUrl)))
+}
 
 // On Vercel the disk is read-only and wiped between runs, so the local PGlite database can never
 // work there. Fail loudly instead of with a confusing file-system error.
@@ -71,7 +115,8 @@ if (hasRealUrl) {
   databaseKind = 'Postgres (DATABASE_URL)'
   // Each serverless instance keeps only a few connections: many instances can run at once,
   // and the database has a limit on total connections.
-  pool = new pg.Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10000 })
+  // connectionTimeoutMillis makes a stuck connection fail in 10 seconds instead of hanging.
+  pool = new pg.Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000 })
 } else {
   databaseKind = 'local PGlite (server/data)'
   const { PGlite } = await import('@electric-sql/pglite')
