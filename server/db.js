@@ -111,12 +111,31 @@ function claimDataDir(dataDir) {
   })
 }
 
-if (hasRealUrl) {
+// Each serverless instance keeps only a few connections: many instances can run at once,
+// and the database has a limit on total connections.
+// connectionTimeoutMillis makes a stuck connection fail in 10 seconds instead of hanging.
+const poolOptions = { connectionString: url, max: 3, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000 }
+
+function isNeonHost(value) {
+  try {
+    return new URL(value).hostname.endsWith('.neon.tech')
+  } catch {
+    return false
+  }
+}
+
+if (hasRealUrl && isNeonHost(url)) {
+  // Neon's own driver. A normal Postgres connection (TCP on port 5432) from a serverless function
+  // was timing out; this driver tunnels the same protocol over a WebSocket on the ordinary secure
+  // web port (443), which is the route Neon recommends for serverless hosts like Vercel.
+  databaseKind = 'Neon (serverless driver)'
+  const { Pool, neonConfig } = await import('@neondatabase/serverless')
+  const { default: ws } = await import('ws')
+  neonConfig.webSocketConstructor = ws
+  pool = new Pool(poolOptions)
+} else if (hasRealUrl) {
   databaseKind = 'Postgres (DATABASE_URL)'
-  // Each serverless instance keeps only a few connections: many instances can run at once,
-  // and the database has a limit on total connections.
-  // connectionTimeoutMillis makes a stuck connection fail in 10 seconds instead of hanging.
-  pool = new pg.Pool({ connectionString: url, max: 3, idleTimeoutMillis: 10000, connectionTimeoutMillis: 10000 })
+  pool = new pg.Pool(poolOptions)
 } else {
   databaseKind = 'local PGlite (server/data)'
   const { PGlite } = await import('@electric-sql/pglite')
