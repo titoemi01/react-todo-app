@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { pool, initDb, listTasks, TASK_COLUMNS } from './db.js'
+import { pool, initDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
 
 // This file builds the Express app and nothing else: it never calls listen().
 // Two things use it:
@@ -60,6 +60,14 @@ const dateOrNull = (value) => (value ? value : null)
 
 // Every query below uses $1, $2... placeholders and passes values separately.
 // NEVER build SQL by gluing user text into a string: that is how SQL injection happens.
+
+// HEALTH: a tiny check that the database answers. It reveals nothing about the data or the
+// connection string, only which driver is in use.
+app.get('/api/health', async (req, res) => {
+  const started = Date.now()
+  await pool.query('SELECT 1')
+  res.json({ ok: true, database: databaseKind, ms: Date.now() - started })
+})
 
 // READ
 app.get('/api/tasks', async (req, res) => {
@@ -158,7 +166,14 @@ app.use((err, req, res, next) => {
     return res.status(err.status).json({ error: 'invalid request body' })
   }
   console.error(err)
-  res.status(500).json({ error: 'Something went wrong on the server' })
+  // On Vercel PREVIEW deployments (and on a developer's computer) include the real reason in the
+  // answer, so a failure can be understood from the browser without digging through logs.
+  // The live production site never does: there the client only gets the generic message.
+  const body = { error: 'Something went wrong on the server' }
+  if (process.env.VERCEL_ENV !== 'production') {
+    body.detail = `${err.name}: ${String(err.message).slice(0, 300)}${err.code ? ` (code ${err.code})` : ''}`
+  }
+  res.status(500).json(body)
 })
 
 export default app
