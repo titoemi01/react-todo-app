@@ -51,6 +51,7 @@ function describeUrl(value) {
 }
 
 const url = cleanUrl(rawUrl)
+export const connectionUrl = url // used only by the preview-only diagnostics in debug.js
 const hasRealUrl = Boolean(url) && !url.includes('USER:PASSWORD@HOST')
 
 if (process.env.VERCEL && hasRealUrl) {

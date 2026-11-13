@@ -1,6 +1,7 @@
 import express from 'express'
 import cors from 'cors'
 import { pool, initDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
+import debugNet from './debug.js'
 
 // This file builds the Express app and nothing else: it never calls listen().
 // Two things use it:
@@ -13,6 +14,10 @@ const MAX_TASKS = 500 // the list is public, so cap it: nobody can fill the data
 
 app.use(cors())
 app.use(express.json({ limit: '10kb' })) // refuse huge request bodies
+
+// DIAGNOSTICS: preview deployments only (answers 404 on the live site). It is registered BEFORE
+// the "database ready" check below on purpose: it has to work exactly when the database does not.
+app.get('/api/debug-net', debugNet)
 
 // Create the table before the first request is handled. In production every cold start of the
 // function runs this once; it is safe to repeat because it only creates what is missing.
