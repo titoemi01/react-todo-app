@@ -11,6 +11,7 @@ import crypto from 'node:crypto'
 import { promisify } from 'node:util'
 import { Router } from 'express'
 import { pool } from './db.js'
+import { sendMail, siteUrl, mailConfigured } from './mail.js'
 
 const scrypt = promisify(crypto.scrypt)
 
@@ -227,6 +228,78 @@ authRouter.post('/login', async (req, res) => {
   await clearKey(emailKey)
   await startSession(req, res, found.id)
   res.json({ user: { id: found.id, email: found.email } })
+})
+
+// "Forgot password": always answers the same, whether or not the email has an account.
+const RESET_MINUTES = 60
+const forgotAnswer = { ok: true, message: 'If that email has an account, a reset link is on its way. It works for 1 hour.' }
+
+authRouter.post('/forgot', async (req, res) => {
+  const ip = clientIp(req)
+  const email = readEmail(req.body?.email)
+  if (!email) return res.status(400).json({ error: 'Enter a valid email address.' })
+
+  // About the site's setup, not about any account, so saying so leaks nothing.
+  if (!mailConfigured() && process.env.VERCEL) {
+    return res.status(503).json({ error: 'Password reset by email is not set up yet.' })
+  }
+
+  const WINDOW = 60 * 60
+  if ((await countInWindow(`forgot:ip:${ip}`, WINDOW)) >= 10) return res.status(429).json({ error: TOO_MANY })
+  if ((await countInWindow(`forgot:email:${email}`, WINDOW)) >= 3) return res.json(forgotAnswer) // quietly stop
+  await recordHit(`forgot:ip:${ip}`, WINDOW)
+  await recordHit(`forgot:email:${email}`, WINDOW)
+
+  const { rows } = await pool.query('SELECT id FROM users WHERE email = $1', [email])
+  if (rows[0]) {
+    const token = crypto.randomBytes(32).toString('base64url')
+    await pool.query('DELETE FROM password_resets WHERE user_id = $1 OR expires_at < now()', [rows[0].id])
+    await pool.query(
+      `INSERT INTO password_resets (token_hash, user_id, expires_at)
+       VALUES ($1, $2, now() + make_interval(mins => $3::int))`,
+      [hashToken(token), rows[0].id, RESET_MINUTES]
+    )
+    try {
+      await sendMail({
+        to: email,
+        subject: 'Reset your password',
+        text:
+          `Someone asked to reset the password for your To-Do account.\n\n` +
+          `Open this link within ${RESET_MINUTES} minutes to choose a new password:\n` +
+          `${siteUrl()}/#reset=${token}\n\n` +
+          `If this was not you, ignore this email. Your password stays the same.`,
+      })
+    } catch (error) {
+      console.error('reset email failed:', error.message) // the person still sees the same answer
+    }
+  }
+  res.json(forgotAnswer)
+})
+
+authRouter.post('/reset', async (req, res) => {
+  const ip = clientIp(req)
+  if ((await countInWindow(`reset:ip:${ip}`, 60 * 60)) >= 20) return res.status(429).json({ error: TOO_MANY })
+  await recordHit(`reset:ip:${ip}`, 60 * 60)
+
+  const token = typeof req.body?.token === 'string' ? req.body.token : ''
+  const password = typeof req.body?.password === 'string' ? req.body.password : ''
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters.' })
+  if (password.length > 128) return res.status(400).json({ error: 'Password is too long (max 128 characters).' })
+
+  // Delete-and-return makes the link single-use even if two requests arrive together.
+  const { rows } = await pool.query(
+    'DELETE FROM password_resets WHERE token_hash = $1 AND expires_at > now() RETURNING user_id',
+    [hashToken(token)]
+  )
+  if (!rows[0]) return res.status(400).json({ error: 'This reset link is invalid or has expired. Ask for a new one.' })
+
+  const userId = rows[0].user_id
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [await hashPassword(password), userId])
+  await pool.query('DELETE FROM sessions WHERE user_id = $1', [userId]) // sign out everywhere else
+  const { rows: users } = await pool.query('SELECT id, email FROM users WHERE id = $1', [userId])
+  await clearKey(`login:email:${users[0].email}`)
+  await startSession(req, res, userId)
+  res.json({ user: users[0] })
 })
 
 authRouter.post('/logout', async (req, res) => {

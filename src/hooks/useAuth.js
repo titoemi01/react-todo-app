@@ -37,6 +37,11 @@ export default function useAuth() {
     setUser(result.user)
   }
 
+  async function resetPassword(token, password) {
+    const result = await api.resetPassword(token, password)
+    setUser(result.user)
+  }
+
   async function signOut() {
     try {
       await api.logout()
@@ -53,5 +58,5 @@ export default function useAuth() {
   // Called when the server answers 401 to a task request (for example the session expired).
   const expire = () => setUser(null)
 
-  return { user, loading, problem, signIn, signUp, signOut, removeAccount, expire }
+  return { user, loading, problem, signIn, signUp, resetPassword, signOut, removeAccount, expire }
 }

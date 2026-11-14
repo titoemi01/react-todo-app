@@ -1,28 +1,41 @@
 import { useState } from 'react'
+import { api } from '../api'
 
-// One form for both "log in" and "create an account". The server checks everything again; the
-// checks here only give instant, friendly messages.
-function AuthForm({ onSignIn, onSignUp }) {
-  const [mode, setMode] = useState('login') // 'login' | 'register'
+// One form for "log in", "create an account", "forgot password" and "choose a new password".
+// The server checks everything again; the checks here only give instant, friendly messages.
+// resetToken is set when the person arrived from the link in the reset email.
+function AuthForm({ onSignIn, onSignUp, onReset, resetToken }) {
+  const [mode, setMode] = useState(resetToken ? 'reset' : 'login') // 'login' | 'register' | 'forgot' | 'reset'
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
+  const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
 
   const registering = mode === 'register'
+  const forgot = mode === 'forgot'
+  const resetting = mode === 'reset'
+  const needsNewPassword = registering || resetting
 
   async function handleSubmit(event) {
     event.preventDefault()
     setError('')
+    setNotice('')
 
-    if (registering && password.length < 8) {
+    if (needsNewPassword && password.length < 8) {
       setError('Password must be at least 8 characters.')
       return
     }
 
     setBusy(true)
     try {
-      await (registering ? onSignUp(email, password) : onSignIn(email, password))
+      if (forgot) {
+        const result = await api.forgotPassword(email)
+        setNotice(result.message)
+        setBusy(false)
+        return
+      }
+      await (resetting ? onReset(resetToken, password) : registering ? onSignUp(email, password) : onSignIn(email, password))
     } catch (err) {
       setError(err.message)
       setBusy(false)
@@ -30,57 +43,87 @@ function AuthForm({ onSignIn, onSignUp }) {
     // On success this component disappears (the app shows the task list), so no cleanup is needed.
   }
 
-  function switchMode() {
-    setMode(registering ? 'login' : 'register')
+  function goTo(next) {
+    setMode(next)
     setError('')
+    setNotice('')
+    setPassword('')
   }
+
+  const title = resetting ? 'Choose a new password' : forgot ? 'Reset your password' : registering ? 'Create your account' : 'Welcome back'
+  const intro = resetting
+    ? 'Pick a new password for your account. You will be signed in right after.'
+    : forgot
+      ? 'Enter your email and we will send you a link to choose a new password.'
+      : registering
+        ? 'Your tasks are private and available on every device you sign in on.'
+        : 'Sign in to see your tasks on this device.'
 
   return (
     <form className="auth-form" onSubmit={handleSubmit} noValidate>
-      <h2>{registering ? 'Create your account' : 'Welcome back'}</h2>
-      <p className="auth-intro">
-        {registering
-          ? 'Your tasks are private and available on every device you sign in on.'
-          : 'Sign in to see your tasks on this device.'}
-      </p>
+      <h2>{title}</h2>
+      <p className="auth-intro">{intro}</p>
 
       {error && (
         <p className="auth-error" role="alert">
           {error}
         </p>
       )}
-
-      <label htmlFor="auth-email">Email</label>
-      <input
-        id="auth-email"
-        type="email"
-        autoComplete="email"
-        value={email}
-        onChange={(event) => setEmail(event.target.value)}
-        required
-      />
-
-      <label htmlFor="auth-password">Password</label>
-      <input
-        id="auth-password"
-        type="password"
-        autoComplete={registering ? 'new-password' : 'current-password'}
-        value={password}
-        onChange={(event) => setPassword(event.target.value)}
-        required
-      />
-      {registering && (
-        <p className="auth-hint">
-          At least 8 characters. There is no &quot;forgot password&quot; yet, so keep it somewhere safe.
+      {notice && (
+        <p className="auth-notice" role="status">
+          {notice}
         </p>
       )}
 
+      {!resetting && (
+        <>
+          <label htmlFor="auth-email">Email</label>
+          <input
+            id="auth-email"
+            type="email"
+            autoComplete="email"
+            value={email}
+            onChange={(event) => setEmail(event.target.value)}
+            required
+          />
+        </>
+      )}
+
+      {!forgot && (
+        <>
+          <label htmlFor="auth-password">{resetting ? 'New password' : 'Password'}</label>
+          <input
+            id="auth-password"
+            type="password"
+            autoComplete={needsNewPassword ? 'new-password' : 'current-password'}
+            value={password}
+            onChange={(event) => setPassword(event.target.value)}
+            required
+          />
+          {needsNewPassword && <p className="auth-hint">At least 8 characters.</p>}
+        </>
+      )}
+
       <button type="submit" className="auth-submit" disabled={busy}>
-        {busy ? 'Please wait...' : registering ? 'Create account' : 'Log in'}
+        {busy
+          ? 'Please wait...'
+          : resetting
+            ? 'Save new password'
+            : forgot
+              ? 'Send reset link'
+              : registering
+                ? 'Create account'
+                : 'Log in'}
       </button>
 
-      <button type="button" className="auth-switch" onClick={switchMode}>
-        {registering ? 'I already have an account' : 'Create an account'}
+      {mode === 'login' && (
+        <button type="button" className="auth-switch" onClick={() => goTo('forgot')}>
+          Forgot your password?
+        </button>
+      )}
+
+      <button type="button" className="auth-switch" onClick={() => goTo(registering || forgot || resetting ? 'login' : 'register')}>
+        {registering || forgot || resetting ? 'Back to log in' : 'Create an account'}
       </button>
     </form>
   )

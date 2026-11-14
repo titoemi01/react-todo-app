@@ -1045,6 +1045,21 @@ body {
   border-color: #6fcf9f;
 }
 
+.auth-form .auth-notice {
+  margin: 0 0 4px;
+  padding: 10px 14px;
+  border-radius: 10px;
+  background: #e3f4ea;
+  color: #1f6b43;
+  font-size: 14px;
+  text-align: center;
+}
+
+[data-theme='dark'] .auth-form .auth-notice {
+  background: rgba(111, 207, 159, 0.14);
+  color: #8fe0b5;
+}
+
 [data-theme='dark'] .auth-form .auth-error {
   background: rgba(255, 143, 143, 0.14);
   color: #ff9b9b;

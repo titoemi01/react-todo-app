@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import './App.css'
 import Header from './components/Header'
 import ThemeToggle from './components/ThemeToggle'
@@ -7,9 +8,18 @@ import useAuth from './hooks/useAuth'
 import useTheme from './hooks/useTheme'
 
 // App decides WHAT to show: a loading message, the sign-in form, or the signed-in task list.
+// The reset email links to "/#reset=<secret>". Read it once, then remove it from the address bar
+// so it is not left in the browser history or a screenshot.
+function takeResetToken() {
+  const match = /^#reset=([\w-]{20,100})$/.exec(window.location.hash)
+  if (match) window.history.replaceState(null, '', window.location.pathname + window.location.search)
+  return match ? match[1] : null
+}
+
 function App() {
   const { theme, toggleTheme } = useTheme()
-  const { user, loading, problem, signIn, signUp, signOut, removeAccount, expire } = useAuth()
+  const { user, loading, problem, signIn, signUp, resetPassword, signOut, removeAccount, expire } = useAuth()
+  const [resetToken] = useState(takeResetToken)
 
   return (
     <div className="app-container">
@@ -39,7 +49,7 @@ function App() {
               {problem}
             </p>
           )}
-          <AuthForm onSignIn={signIn} onSignUp={signUp} />
+          <AuthForm onSignIn={signIn} onSignUp={signUp} onReset={resetPassword} resetToken={resetToken} />
         </main>
       )}
     </div>

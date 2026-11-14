@@ -198,6 +198,15 @@ export async function initDb() {
     )
   `)
 
+  // One-time "reset your password" links. Only a hash of the secret is stored.
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS password_resets (
+      token_hash TEXT PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL
+    )
+  `)
+
   await pool.query(`
     CREATE TABLE IF NOT EXISTS tasks (
       id         SERIAL PRIMARY KEY,

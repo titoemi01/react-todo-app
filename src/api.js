@@ -36,6 +36,8 @@ export const api = {
   me: () => request('/auth/me'),
   register: (email, password) => post('/auth/register', { email, password }),
   login: (email, password) => post('/auth/login', { email, password }),
+  forgotPassword: (email) => post('/auth/forgot', { email }),
+  resetPassword: (token, password) => post('/auth/reset', { token, password }),
   logout: () => request('/auth/logout', { method: 'POST' }),
   deleteAccount: (password) =>
     request('/auth/me', { method: 'DELETE', body: JSON.stringify({ password }) }),
