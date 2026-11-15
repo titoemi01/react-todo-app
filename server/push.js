@@ -165,9 +165,10 @@ pushRouter.post('/test', requireAuth, async (req, res) => {
 
 // The scheduler calls this every minute. The secret keeps strangers from poking it.
 export async function cronRemind(req, res) {
-  const secret = process.env.CRON_SECRET
+  // Trim both sides: a stray space or line break from copy-and-paste must not lock the job out.
+  const secret = (process.env.CRON_SECRET ?? '').trim()
   if (!secret || secret.length < 16) return res.status(503).json({ error: 'Reminder job is not set up.' })
-  const given = String(req.headers.authorization ?? '').replace(/^Bearer /, '')
+  const given = String(req.headers.authorization ?? '').replace(/^\s*Bearer\s+/i, '').trim()
   const sha = (s) => crypto.createHash('sha256').update(s).digest()
   if (!crypto.timingSafeEqual(sha(given), sha(secret))) return res.status(401).json({ error: 'Not allowed.' })
   if (!pushConfigured()) return res.status(503).json({ error: 'Phone alerts are not set up on the server yet.' })
