@@ -170,13 +170,7 @@ export async function cronRemind(req, res) {
   if (!secret || secret.length < 16) return res.status(503).json({ error: 'Reminder job is not set up.' })
   const given = String(req.headers.authorization ?? '').replace(/^\s*Bearer\s+/i, '').trim()
   const sha = (s) => crypto.createHash('sha256').update(s).digest()
-  if (!crypto.timingSafeEqual(sha(given), sha(secret))) {
-    // Temporary hint for setup: lengths only, never the secret itself.
-    return res.status(401).json({
-      error: 'Not allowed.',
-      hint: { headerSeen: Boolean(req.headers.authorization), sentLength: given.length, expectedLength: secret.length },
-    })
-  }
+  if (!crypto.timingSafeEqual(sha(given), sha(secret))) return res.status(401).json({ error: 'Not allowed.' })
   if (!pushConfigured()) return res.status(503).json({ error: 'Phone alerts are not set up on the server yet.' })
   res.json(await sendDueReminders())
 }
