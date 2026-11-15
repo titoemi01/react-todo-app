@@ -73,6 +73,40 @@ export async function sendDueReminders() {
     LIMIT 200
   `)
 
+  // Heads-up pass: tasks WITH a time that are due soon (within the person's chosen lead time) but
+  // not yet due. Each due moment gets one heads-up.
+  const { rows: soon } = await pool.query(`
+    SELECT id, user_id, title, key, mins FROM (
+      SELECT t.id, t.user_id, t.title, t.heads_up_for, u.lead_minutes,
+             to_char(t.due_date, 'YYYY-MM-DD') || ' ' || to_char(t.due_time, 'HH24:MI') AS key,
+             (t.due_date + t.due_time) AT TIME ZONE COALESCE(u.tz, 'UTC') AS due_at,
+             CEIL(EXTRACT(EPOCH FROM ((t.due_date + t.due_time) AT TIME ZONE COALESCE(u.tz, 'UTC') - now())) / 60)::int AS mins
+        FROM tasks t JOIN users u ON u.id = t.user_id
+       WHERE NOT t.completed AND t.due_date IS NOT NULL AND t.due_time IS NOT NULL AND u.lead_minutes > 0
+         AND EXISTS (SELECT 1 FROM push_subscriptions s WHERE s.user_id = t.user_id)
+    ) x
+    WHERE due_at > now() AND due_at <= now() + (lead_minutes * interval '1 minute')
+      AND heads_up_for IS DISTINCT FROM key
+    ORDER BY due_at
+    LIMIT 200
+  `)
+  let headsUp = 0
+  for (const task of soon) {
+    const claim = await pool.query(
+      'UPDATE tasks SET heads_up_for = $1 WHERE id = $2 AND heads_up_for IS DISTINCT FROM $1 RETURNING id',
+      [task.key, task.id]
+    )
+    if (claim.rows.length === 0) continue
+    const { delivered, attempted } = await notifyUser(task.user_id, {
+      title: `Due in ${task.mins} minute${task.mins === 1 ? '' : 's'}`,
+      body: `${task.title.slice(0, 120)} (due at ${task.key.slice(-5)})`,
+      tag: `soon-${task.id}`,
+      url: '/',
+    })
+    if (delivered > 0) headsUp++
+    else if (attempted > 0) await pool.query('UPDATE tasks SET heads_up_for = NULL WHERE id = $1', [task.id])
+  }
+
   let sent = 0
   for (const task of due) {
     // Claim it first: if two job runs overlap, only one gets the row back and sends.
@@ -92,7 +126,7 @@ export async function sendDueReminders() {
     if (delivered > 0) sent++
     else if (attempted > 0) await pool.query('UPDATE tasks SET reminded_for = NULL WHERE id = $1', [task.id]) // try again next minute
   }
-  return { due: due.length, sent }
+  return { due: due.length, sent, headsUp }
 }
 
 // ---------- routes ----------
@@ -138,6 +172,20 @@ pushRouter.post('/subscribe', requireAuth, async (req, res) => {
   )
   await pool.query('UPDATE users SET tz = $1 WHERE id = $2', [tz, req.user.id])
   res.status(201).json({ ok: true })
+})
+
+const LEAD_CHOICES = [0, 5, 15, 30, 60]
+
+pushRouter.get('/settings', requireAuth, async (req, res) => {
+  const { rows } = await pool.query('SELECT lead_minutes FROM users WHERE id = $1', [req.user.id])
+  res.json({ leadMinutes: rows[0]?.lead_minutes ?? 15 })
+})
+
+pushRouter.put('/settings', requireAuth, async (req, res) => {
+  const leadMinutes = req.body?.leadMinutes
+  if (!LEAD_CHOICES.includes(leadMinutes)) return res.status(400).json({ error: 'Choose one of the listed times.' })
+  await pool.query('UPDATE users SET lead_minutes = $1 WHERE id = $2', [leadMinutes, req.user.id])
+  res.json({ leadMinutes })
 })
 
 pushRouter.post('/unsubscribe', requireAuth, async (req, res) => {

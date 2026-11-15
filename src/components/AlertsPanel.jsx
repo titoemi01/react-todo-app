@@ -1,9 +1,38 @@
+import { useState, useEffect } from 'react'
 import usePush from '../hooks/usePush'
+import { api } from '../api'
+
+const LEAD_CHOICES = [
+  [0, 'No heads-up'],
+  [5, '5 minutes before'],
+  [15, '15 minutes before'],
+  [30, '30 minutes before'],
+  [60, '1 hour before'],
+]
 
 // Turn phone / computer alerts on or off for THIS device. When a task's due time arrives, the
 // server sends an alert, and it shows up even when the app is closed.
 function AlertsPanel() {
   const { state, busy, message, enable, disable, sendTest } = usePush()
+  const [lead, setLead] = useState(15) // the heads-up setting belongs to the account, not the device
+  const [leadError, setLeadError] = useState('')
+
+  useEffect(() => {
+    api.getAlertSettings().then((s) => setLead(s.leadMinutes)).catch(() => {})
+  }, [])
+
+  async function changeLead(event) {
+    const minutes = Number(event.target.value)
+    const before = lead
+    setLead(minutes)
+    setLeadError('')
+    try {
+      await api.setAlertSettings(minutes)
+    } catch (error) {
+      setLead(before)
+      setLeadError(error.message || 'Could not save that.')
+    }
+  }
 
   return (
     <section className="calendar-panel" aria-label="Task alerts">
@@ -56,6 +85,26 @@ function AlertsPanel() {
             </button>
           </div>
         </>
+      )}
+
+      <p>
+        <label>
+          Heads-up alert:{' '}
+          <select value={lead} onChange={changeLead}>
+            {LEAD_CHOICES.map(([minutes, label]) => (
+              <option key={minutes} value={minutes}>
+                {label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <br />
+        <small>You also get an alert when the task is actually due. Tasks with no time are not warned early.</small>
+      </p>
+      {leadError && (
+        <p className="error-message" role="alert">
+          {leadError}
+        </p>
       )}
 
       {message && (

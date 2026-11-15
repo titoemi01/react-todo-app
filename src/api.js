@@ -51,6 +51,8 @@ export const api = {
   pushSubscribe: (subscription, timeZone) => post('/push/subscribe', { subscription, timeZone }),
   pushUnsubscribe: (endpoint) => post('/push/unsubscribe', { endpoint }),
   pushTest: () => request('/push/test', { method: 'POST' }),
+  getAlertSettings: () => request('/push/settings'),
+  setAlertSettings: (leadMinutes) => request('/push/settings', { method: 'PUT', body: JSON.stringify({ leadMinutes }) }),
 
   // tasks (private to the signed-in user)
   getTasks: () => request('/tasks'),

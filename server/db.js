@@ -233,6 +233,9 @@ export async function initDb() {
   // due moment of a task has already been announced (so each one rings once).
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tz TEXT')
   await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS reminded_for TEXT')
+  // "Heads-up" alert: how many minutes before a task's due time to warn (0 = no heads-up).
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS lead_minutes INTEGER NOT NULL DEFAULT 15')
+  await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS heads_up_for TEXT')
   await pool.query(`
     CREATE TABLE IF NOT EXISTS push_subscriptions (
       id         SERIAL PRIMARY KEY,
