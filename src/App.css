@@ -1179,6 +1179,21 @@ body {
   font-size: 14px;
 }
 
+.calendar-actions > button:disabled {
+  opacity: 0.6;
+  cursor: wait;
+}
+
+.alerts-steps {
+  margin: 6px 0 10px;
+  padding-left: 20px;
+  font-size: 14px;
+}
+
+.alerts-steps li {
+  margin-bottom: 6px;
+}
+
 .calendar-help summary {
   padding: 8px 0;
   color: #397b5a;

@@ -229,6 +229,21 @@ export async function initDb() {
   await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS due_time TIME')
   // Each person's secret calendar link: calendar apps cannot send a login cookie, so the long
   // random token inside the link is what proves whose tasks to show (see calendar.js).
+  // Reminders: where each person's wall clock is, which phones/computers want alerts, and which
+  // due moment of a task has already been announced (so each one rings once).
+  await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS tz TEXT')
+  await pool.query('ALTER TABLE tasks ADD COLUMN IF NOT EXISTS reminded_for TEXT')
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS push_subscriptions (
+      id         SERIAL PRIMARY KEY,
+      user_id    INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      endpoint   TEXT NOT NULL UNIQUE,
+      p256dh     TEXT NOT NULL,
+      auth       TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+    )
+  `)
+  await pool.query('CREATE INDEX IF NOT EXISTS push_subscriptions_user_idx ON push_subscriptions (user_id)')
   await pool.query('ALTER TABLE users ADD COLUMN IF NOT EXISTS calendar_token TEXT')
   await pool.query('CREATE UNIQUE INDEX IF NOT EXISTS users_calendar_token_idx ON users (calendar_token)')
 }

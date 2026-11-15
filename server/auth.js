@@ -45,7 +45,7 @@ async function wasteTimeLikeAHash(password) {
 
 // ---------- rate limits (counters in the database, so they work across serverless instances) ----------
 
-async function countInWindow(key, windowSeconds) {
+export async function countInWindow(key, windowSeconds) {
   const { rows } = await pool.query(
     `SELECT count FROM rate_limits
       WHERE key = $1 AND window_start > now() - make_interval(secs => $2::double precision)`,
@@ -55,7 +55,7 @@ async function countInWindow(key, windowSeconds) {
 }
 
 // Add one to a counter, starting a fresh window if the old one has expired.
-async function recordHit(key, windowSeconds) {
+export async function recordHit(key, windowSeconds) {
   await pool.query(
     `INSERT INTO rate_limits (key, count, window_start) VALUES ($1, 1, now())
      ON CONFLICT (key) DO UPDATE SET

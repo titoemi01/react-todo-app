@@ -46,6 +46,12 @@ export const api = {
   calendarLink: () => request('/calendar/link'),
   resetCalendarLink: () => request('/calendar/reset', { method: 'POST' }),
 
+  // phone / computer alerts
+  pushKey: () => request('/push/key'),
+  pushSubscribe: (subscription, timeZone) => post('/push/subscribe', { subscription, timeZone }),
+  pushUnsubscribe: (endpoint) => post('/push/unsubscribe', { endpoint }),
+  pushTest: () => request('/push/test', { method: 'POST' }),
+
   // tasks (private to the signed-in user)
   getTasks: () => request('/tasks'),
   addTask: (title, priority, dueDate, dueTime) => post('/tasks', { title, priority, dueDate, dueTime }),

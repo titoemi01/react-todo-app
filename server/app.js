@@ -2,6 +2,7 @@ import express from 'express'
 import { pool, initDb, listTasks, databaseKind, TASK_COLUMNS } from './db.js'
 import { authRouter, requireAuth, sameOriginOnly } from './auth.js'
 import { calendarRouter, singleTaskCalendar } from './calendar.js'
+import { pushRouter, cronRemind } from './push.js'
 
 // This file builds the Express app and nothing else: it never calls listen().
 // Two things use it:
@@ -108,6 +109,10 @@ app.use('/api/auth', authRouter)
 // CALENDAR: /api/calendar/link and /reset need the login; the feed address /api/calendar/<secret>.ics
 // does not (calendar apps cannot log in), the secret inside the address is the proof.
 app.use('/api/calendar', calendarRouter)
+
+// PHONE ALERTS: /api/push/... (login needed, except the public key) and the scheduler's job address.
+app.use('/api/push', pushRouter)
+app.all('/api/cron/remind', cronRemind)
 
 // EVERYTHING BELOW IS PRIVATE. requireAuth answers 401 unless the browser has a valid session,
 // and otherwise sets req.user. Every query then filters by req.user.id, so a person can only ever

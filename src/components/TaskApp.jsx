@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { Check, LogOut, CalendarDays } from 'lucide-react'
+import { Check, LogOut, CalendarDays, Bell } from 'lucide-react'
 import CalendarPanel from './CalendarPanel'
+import AlertsPanel from './AlertsPanel'
 import TaskStats from './TaskStats'
 import TaskForm from './TaskForm'
 import TaskFilters from './TaskFilters'
@@ -23,7 +24,8 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
     clearAll,
   } = useTasks(onUnauthorized)
   const [filter, setFilter] = useState('all')
-  const [showCalendar, setShowCalendar] = useState(false)
+  const [panel, setPanel] = useState(null) // which side panel is open: null | 'calendar' | 'alerts'
+  const togglePanel = (name) => setPanel((open) => (open === name ? null : name))
 
   function handleDelete(id) {
     if (window.confirm('Are you sure you want to delete this task?')) deleteTask(id)
@@ -69,8 +71,17 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
         <button
           type="button"
           className="user-logout"
-          aria-expanded={showCalendar}
-          onClick={() => setShowCalendar((open) => !open)}
+          aria-expanded={panel === 'alerts'}
+          onClick={() => togglePanel('alerts')}
+        >
+          <Bell size={15} />
+          Alerts
+        </button>
+        <button
+          type="button"
+          className="user-logout"
+          aria-expanded={panel === 'calendar'}
+          onClick={() => togglePanel('calendar')}
         >
           <CalendarDays size={15} />
           Calendar
@@ -84,7 +95,8 @@ function TaskApp({ user, onSignOut, onDeleteAccount, onUnauthorized }) {
         </button>
       </div>
 
-      {showCalendar && <CalendarPanel />}
+      {panel === 'calendar' && <CalendarPanel />}
+      {panel === 'alerts' && <AlertsPanel />}
 
       {error && (
         <p className="error-message" role="alert">
