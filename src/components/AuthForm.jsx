@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Eye, EyeOff } from 'lucide-react'
 import { api } from '../api'
 
 // One form for "log in", "create an account", "forgot password" and "choose a new password".
@@ -11,6 +12,7 @@ function AuthForm({ onSignIn, onSignUp, onReset, resetToken }) {
   const [error, setError] = useState('')
   const [notice, setNotice] = useState('')
   const [busy, setBusy] = useState(false)
+  const [showPassword, setShowPassword] = useState(false) // the eye button: show the typed password
 
   const registering = mode === 'register'
   const forgot = mode === 'forgot'
@@ -48,6 +50,7 @@ function AuthForm({ onSignIn, onSignUp, onReset, resetToken }) {
     setError('')
     setNotice('')
     setPassword('')
+    setShowPassword(false)
   }
 
   const title = resetting ? 'Choose a new password' : forgot ? 'Reset your password' : registering ? 'Create your account' : 'Welcome back'
@@ -92,14 +95,25 @@ function AuthForm({ onSignIn, onSignUp, onReset, resetToken }) {
       {!forgot && (
         <>
           <label htmlFor="auth-password">{resetting ? 'New password' : 'Password'}</label>
-          <input
-            id="auth-password"
-            type="password"
-            autoComplete={needsNewPassword ? 'new-password' : 'current-password'}
-            value={password}
-            onChange={(event) => setPassword(event.target.value)}
-            required
-          />
+          <div className="password-field">
+            <input
+              id="auth-password"
+              type={showPassword ? 'text' : 'password'}
+              autoComplete={needsNewPassword ? 'new-password' : 'current-password'}
+              value={password}
+              onChange={(event) => setPassword(event.target.value)}
+              required
+            />
+            <button
+              type="button"
+              className="password-toggle"
+              onClick={() => setShowPassword((shown) => !shown)}
+              aria-label={showPassword ? 'Hide password' : 'Show password'}
+              aria-pressed={showPassword}
+            >
+              {showPassword ? <EyeOff size={18} aria-hidden="true" /> : <Eye size={18} aria-hidden="true" />}
+            </button>
+          </div>
           {needsNewPassword && <p className="auth-hint">At least 8 characters.</p>}
         </>
       )}
