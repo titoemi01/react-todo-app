@@ -107,7 +107,7 @@ function TaskItem({ task, onToggle, onDelete, onSave }) {
             {/* Opens a one-event calendar file (needs the login cookie, which the browser sends). */}
             {due && !task.completed && (
               <a className="add-to-calendar" href={`/api/tasks/${task.id}/calendar.ics`} download>
-                Add to calendar
+                Add to another calendar
               </a>
             )}
           </div>

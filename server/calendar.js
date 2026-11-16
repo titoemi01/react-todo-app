@@ -67,7 +67,9 @@ function timedRange(isoDate, time) {
   return { start: format(start), end: format(end) }
 }
 
-const utcStamp = (date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
+const PRIORITY_NUMBER = { High: 1, Medium: 5, Low: 9 } // the calendar format's own scale
+
+const utcStamp =(date) => date.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z')
 
 function eventLines(task, stamp) {
   const lines = [
@@ -88,7 +90,11 @@ function eventLines(task, stamp) {
     `SUMMARY:${escapeText(task.title)}`,
     `DESCRIPTION:${escapeText(`Priority: ${task.priority}`)}`,
     'STATUS:CONFIRMED',
-    'TRANSP:TRANSPARENT' // a reminder, not a meeting: it should not mark you as busy
+    'TRANSP:TRANSPARENT', // a reminder, not a meeting: it should not mark you as busy
+    // Outlook turns PRIORITY into its Importance (1 = High, 9 = Low) and CATEGORIES into a category
+    // label you can color. Which of these a given Outlook shows varies, so we send both.
+    `PRIORITY:${PRIORITY_NUMBER[task.priority] ?? 5}`,
+    `CATEGORIES:${escapeText(`${task.priority} priority`)}`
   )
 
   // Alerts. Calendar apps play their own alert sound. Timed tasks ring 15 minutes before and at the
