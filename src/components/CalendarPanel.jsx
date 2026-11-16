@@ -78,7 +78,11 @@ function CalendarPanel() {
             <button type="button" className="calendar-primary" onClick={copy}>
               Copy link
             </button>
-            <a className="calendar-secondary" href={link.webcalUrl}>
+            <a
+              className="calendar-secondary"
+              href={link.webcalUrl}
+              title="Works for Apple Calendar and phones. For Outlook on Windows, copy the link instead."
+            >
               Open in calendar app
             </a>
             <button type="button" className="calendar-reset" onClick={reset}>
@@ -115,7 +119,14 @@ function CalendarPanel() {
             <strong>Mac Calendar:</strong> File, &quot;New Calendar Subscription&quot;, paste the link.
           </li>
           <li>
-            <strong>Outlook:</strong> Add calendar, &quot;Subscribe from web&quot;, paste the link.
+            <strong>Outlook on the web (outlook.com):</strong> Add calendar, &quot;Subscribe from web&quot;, paste
+            the link.
+          </li>
+          <li>
+            <strong>Outlook on Windows (desktop app):</strong> do not use the &quot;Open in calendar app&quot;
+            button, because Outlook turns that link into an insecure one that stays empty. Instead: File,
+            Account Settings, Account Settings, the &quot;Internet Calendars&quot; tab, New, paste the link
+            (it must start with https://), Add.
           </li>
         </ul>
         <p>
