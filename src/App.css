@@ -1216,6 +1216,47 @@ body {
   font-size: 14px;
 }
 
+.calendar-nudge {
+  margin: 4px 0 10px;
+  font-size: 13px;
+}
+
+/* A pop-up explanation on the "Open in calendar app" button (hover or keyboard focus) */
+.has-tip {
+  position: relative;
+}
+
+.has-tip .tip {
+  position: absolute;
+  bottom: calc(100% + 8px);
+  left: 0;
+  z-index: 10;
+  width: 260px;
+  max-width: 80vw;
+  padding: 10px 12px;
+  border-radius: 8px;
+  background: #26352d;
+  color: white;
+  font-size: 13px;
+  line-height: 1.4;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 0.25);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition: opacity 0.15s;
+}
+
+.has-tip:hover .tip,
+.has-tip:focus-visible .tip {
+  opacity: 1;
+  visibility: visible;
+}
+
+[data-theme='dark'] .has-tip .tip {
+  background: #e4efe8;
+  color: #17211b;
+}
+
 .calendar-actions > button:disabled {
   opacity: 0.6;
   cursor: wait;

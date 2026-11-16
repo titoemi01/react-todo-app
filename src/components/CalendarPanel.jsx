@@ -3,7 +3,27 @@ import { api } from '../api'
 
 // Shows the private calendar link. Subscribe to it ONCE in Google Calendar, Apple Calendar or
 // Outlook and every unfinished task that has a due date appears there and stays up to date.
+const HELP_SEEN_KEY = 'calendar-help-seen'
+
+// The how-to steps start open until the person closes them once; after that they stay closed.
+// (Browser storage can be blocked, so every access is wrapped: the steps then simply start open.)
+function helpAlreadySeen() {
+  try {
+    return localStorage.getItem(HELP_SEEN_KEY) === '1'
+  } catch {
+    return false
+  }
+}
+function rememberHelpSeen() {
+  try {
+    localStorage.setItem(HELP_SEEN_KEY, '1')
+  } catch {
+    // ignore: nothing to remember it with
+  }
+}
+
 function CalendarPanel() {
+  const [helpOpen, setHelpOpen] = useState(() => !helpAlreadySeen())
   const [link, setLink] = useState(null) // { url, webcalUrl }
   const [error, setError] = useState('')
   const [message, setMessage] = useState('')
@@ -78,12 +98,12 @@ function CalendarPanel() {
             <button type="button" className="calendar-primary" onClick={copy}>
               Copy link
             </button>
-            <a
-              className="calendar-secondary"
-              href={link.webcalUrl}
-              title="Works for Apple Calendar and phones. For Outlook on Windows, copy the link instead."
-            >
+            <a className="calendar-secondary has-tip" href={link.webcalUrl} aria-describedby="open-tip">
               Open in calendar app
+              <span id="open-tip" role="tooltip" className="tip">
+                Subscribes Apple Calendar or your phone to your tasks in one click. Using Outlook on Windows?
+                Use <strong>Copy link</strong> instead and follow the steps below.
+              </span>
             </a>
             <button type="button" className="calendar-reset" onClick={reset}>
               Make a new link
@@ -95,6 +115,11 @@ function CalendarPanel() {
               {message}
             </p>
           )}
+
+          <p className="calendar-nudge">
+            New here? Open <strong>How to add it to my calendar</strong> below. It has the steps for Outlook,
+            Google Calendar and iPhone.
+          </p>
         </>
       )}
 
@@ -102,7 +127,14 @@ function CalendarPanel() {
         Treat this link like a password: anyone who has it can see your task titles and dates.
       </p>
 
-      <details className="calendar-help">
+      <details
+        className="calendar-help"
+        open={helpOpen}
+        onToggle={(event) => {
+          setHelpOpen(event.currentTarget.open)
+          if (!event.currentTarget.open) rememberHelpSeen()
+        }}
+      >
         <summary>How to add it to my calendar</summary>
         <ul>
           <li>
